@@ -137,18 +137,19 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
     }
 
     .search-results {
-      position: absolute;
-      top: calc(100% + 8px);
-      left: 0;
-      right: 0;
-      background: var(--results-bg);
-      border: 1px solid var(--results-border);
-      border-radius: 16px;
-      max-height: 400px;
-      overflow-y: auto;
-      z-index: 1000;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-      backdrop-filter: blur(20px);
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    margin-top: .5rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    overflow: hidden;
+    max-height: 500px;
+    overflow-y: auto;
     }
 
     .search-result-item {
