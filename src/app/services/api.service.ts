@@ -53,7 +53,7 @@ export interface SunburstData {
   providedIn: 'root'
 })
 export class ApiService {
-  private baseUrl = 'http://localhost:3001/api';
+  private baseUrl = 'https://ai-backend-358895512845.asia-south1.run.app/api';
 
   constructor(private http: HttpClient) {}
 
