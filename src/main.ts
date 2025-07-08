@@ -823,10 +823,10 @@ export class App implements OnInit {
   }
 
   onSearchResult(result: SearchResult) {
-    if (result.type === 'category') {
-      this.sunburstChart?.zoomToSearchResult(result.id);
-    } else if (result.categoryId) {
-      this.sunburstChart?.zoomToSearchResult(result.categoryId);
+    if (result.type === 'category' && result.id) {
+      this.sunburstChart?.highlightCategory(result.id);
+    } else if (result.type === 'tool' && result.name) {
+      this.sunburstChart?.highlightTool(result.name);
     }
   }
 

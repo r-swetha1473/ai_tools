@@ -15,7 +15,7 @@ import { Subject, takeUntil } from 'rxjs';
         <!-- Center Navigation -->
         <div class="center-navigation" *ngIf="centerInfo">
           <div class="center-content">
-            <div class="breadcrumb" *ngIf="currentFocus">
+            <div class="breadcrumb" *ngIf="currentFocus && currentFocus !== root">
               <button class="breadcrumb-item root" (click)="resetZoom()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
@@ -26,7 +26,7 @@ import { Subject, takeUntil } from 'rxjs';
               <span class="breadcrumb-current">{{ currentFocus.data.name }}</span>
             </div>
             
-            <div class="center-info" *ngIf="!currentFocus">
+            <div class="center-info" *ngIf="!currentFocus || currentFocus === root">
               <h3 class="center-title">AI Tools Universe</h3>
               <p class="center-description">Click any category to explore</p>
               <div class="center-stats">
@@ -41,7 +41,7 @@ import { Subject, takeUntil } from 'rxjs';
               </div>
             </div>
             
-            <div class="category-info" *ngIf="currentFocus">
+            <div class="category-info" *ngIf="currentFocus && currentFocus !== root">
               <div class="category-header">
                 <div class="category-icon" [style.background]="currentFocus.data.color">
                   {{ getCategoryIcon(currentFocus.data.id) }}
@@ -139,9 +139,6 @@ import { Subject, takeUntil } from 'rxjs';
       border-radius: 20px;
       overflow: hidden;
     }
-.sunburst-svg path[stroke-width="3"] {
-  filter: drop-shadow(0 0 6px #f59e0b);
-}
 
     .chart-wrapper {
       position: relative;
@@ -160,6 +157,19 @@ import { Subject, takeUntil } from 'rxjs';
       cursor: pointer;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 10px;
+    }
+
+    /* Highlighted elements */
+    .sunburst-svg .highlighted {
+      filter: drop-shadow(0 0 8px #f59e0b) brightness(1.2);
+      stroke: #f59e0b !important;
+      stroke-width: 3px !important;
+    }
+
+    .sunburst-svg .parent-highlighted {
+      filter: drop-shadow(0 0 6px #3b82f6) brightness(1.1);
+      stroke: #3b82f6 !important;
+      stroke-width: 2px !important;
     }
 
     /* Center Navigation */
@@ -619,6 +629,7 @@ export class SunburstChartComponent implements OnInit, OnDestroy, AfterViewInit 
   private parent: any;
   private isDarkMode = false;
   private highlightedTool: any = null;
+  private highlightedCategory: any = null;
 
   currentFocus: any = null;
   centerInfo: any = null;
@@ -689,6 +700,7 @@ export class SunburstChartComponent implements OnInit, OnDestroy, AfterViewInit 
       .join('path')
       .attr('fill', (d: any) => this.getFillColor(d, color))
       .attr('d', (d: any) => arc(d.current))
+      .style('cursor', (d: any) => d.depth === 2 && d.data.url ? 'pointer' : 'pointer')
       .on('click', (event: any, d: any) => this.clicked(event, d))
       .on('mouseover', (event: any, d: any) => this.showTooltip(event, d))
       .on('mousemove', (event: any) => this.updateTooltip(event))
@@ -703,13 +715,16 @@ export class SunburstChartComponent implements OnInit, OnDestroy, AfterViewInit 
       .attr('dy', '0.35em')
       .attr('transform', (d: any) => this.labelTransform(d.current))
       .text((d: any) => d.data.name)
-      .style('fill', this.isDarkMode ? '#f1f5f9' : '#1e293b');
+      .style('fill', this.isDarkMode ? '#f1f5f9' : '#1e293b')
+      .style('font-size', '10px')
+      .style('font-weight', '500');
 
     this.parent = this.g.append('circle')
       .datum(this.root)
       .attr('r', this.radius)
       .attr('fill', 'none')
       .attr('pointer-events', 'all')
+      .style('cursor', 'pointer')
       .on('click', (event: any, d: any) => this.clicked(event, d));
 
     this.setCenterInfo();
@@ -723,6 +738,8 @@ export class SunburstChartComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   public highlightTool(toolName: string) {
+    this.clearHighlights();
+    
     const tool = this.root.descendants().find(
       (d: any) => d.depth === 2 && d.data.name.toLowerCase() === toolName.toLowerCase()
     );
@@ -730,25 +747,58 @@ export class SunburstChartComponent implements OnInit, OnDestroy, AfterViewInit 
     if (!tool) return;
 
     const parentCategory = tool.ancestors().find((d: any) => d.depth === 1);
+    
+    // Zoom to parent category first
     this.clicked(null, parentCategory);
 
-    this.highlightedTool = tool;
-
+    // Highlight after zoom animation completes
     setTimeout(() => {
+      this.highlightedTool = tool;
+      this.highlightedCategory = parentCategory;
+
       this.path
-        .style('stroke', (d: any) => d === tool ? '#f59e0b' : null)
-        .style('stroke-width', (d: any) => d === tool ? 3 : null);
+        .classed('highlighted', (d: any) => d === tool)
+        .classed('parent-highlighted', (d: any) => d === parentCategory);
     }, 800);
   }
 
+  public highlightCategory(categoryId: string) {
+    this.clearHighlights();
+    
+    const category = this.root.descendants().find(
+      (d: any) => d.depth === 1 && d.data.id === categoryId
+    );
+
+    if (!category) return;
+
+    this.highlightedCategory = category;
+    
+    this.path.classed('parent-highlighted', (d: any) => d === category);
+    
+    // Zoom to category
+    this.clicked(null, category);
+  }
+
+  private clearHighlights() {
+    this.highlightedTool = null;
+    this.highlightedCategory = null;
+    
+    if (this.path) {
+      this.path
+        .classed('highlighted', false)
+        .classed('parent-highlighted', false);
+    }
+  }
+
   private clicked(event: any, p: any) {
+    // Handle tool clicks - open URL
     if (p.depth === 2 && p.data.url) {
       window.open(p.data.url, '_blank');
       return;
     }
 
-    this.highlightedTool = null;
-    this.path.style('stroke', null).style('stroke-width', null);
+    // Clear highlights when zooming
+    this.clearHighlights();
 
     this.parent.datum(p.depth ? p.parent : this.root);
 
@@ -822,12 +872,12 @@ export class SunburstChartComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   resetZoom() {
+    this.clearHighlights();
     this.clicked(null, this.root);
   }
 
   zoomToSearchResult(categoryId: string) {
-    const categoryNode = this.root.descendants().find((d: any) => d.depth === 1 && d.data.id === categoryId);
-    if (categoryNode) this.clicked(null, categoryNode);
+    this.highlightCategory(categoryId);
   }
 
   private setCenterInfo() {
