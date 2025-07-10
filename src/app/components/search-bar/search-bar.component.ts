@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Output, EventEmitter,HostListener  } from '@angular/core';
+import { Component, OnInit, OnDestroy, Output, EventEmitter, HostListener, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, SearchResult } from '../../services/api.service';
@@ -51,12 +51,27 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
       </div>
     </div>
   </div>
+
+  <div class="search-results no-results" *ngIf="showResults && searchResults.length === 0">
+  <div class="no-results-message">
+    <span>😕</span> No tools or categories found.
+  </div>
+</div>
+
 </div>
 
   `,
   styles: [`
+  .no-results-message {
+  padding: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--results-text);
+}
+
     .search-container {
       position: relative;
+       z-index: 10;
       width: 100%;
       max-width: 600px;
       margin: 0 auto;
@@ -146,12 +161,22 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
     border-radius: 1rem;
     margin-top: .5rem;
     box-shadow: var(--shadow-lg);
-    z-index: 100;
+    z-index: 1;
     overflow: hidden;
     max-height: 500px;
     overflow-y: auto;
     }
-
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 400px;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
     .search-result-item {
       display: flex;
       align-items: center;
@@ -258,6 +283,7 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
 })
 export class SearchBarComponent implements OnInit, OnDestroy {
   @Output() searchResult = new EventEmitter<SearchResult>();
+  @Input() initialFocus: boolean = false;
 
   searchQuery = '';
   searchResults: SearchResult[] = [];
@@ -348,7 +374,6 @@ export class SearchBarComponent implements OnInit, OnDestroy {
     return index === this.searchResults.findIndex(r => r.type === type);
   }
 
-  // Keyboard navigation
   @HostListener('document:keydown.arrowDown', ['$event'])
   handleArrowDown(event: KeyboardEvent) {
     if (!this.showResults || this.searchResults.length === 0) return;
@@ -363,11 +388,14 @@ export class SearchBarComponent implements OnInit, OnDestroy {
     this.selectedIndex = (this.selectedIndex - 1 + this.searchResults.length) % this.searchResults.length;
   }
 
-  @HostListener('document:keydown.enter', ['$event'])
-  handleEnter(event: KeyboardEvent) {
-    if (this.selectedIndex >= 0 && this.showResults) {
-      event.preventDefault();
-      this.selectResult(this.searchResults[this.selectedIndex]);
-    }
+@HostListener('document:keydown.enter', ['$event'])
+handleEnter(event: KeyboardEvent) {
+  if (this.showResults && this.selectedIndex >= 0) {
+    event.preventDefault(); // Prevent default form submission or page reload
+    this.selectResult(this.searchResults[this.selectedIndex]);
+  } else {
+    event.preventDefault(); // Prevent Enter key from triggering anything unwanted
   }
+}
+
 }

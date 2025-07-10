@@ -29,6 +29,19 @@ export interface SearchResult {
   category?: string;
   categoryColor?: string;
 }
+export interface SearchResult {
+  type: 'tool' | 'category';
+  id: string;
+  name: string;
+  description: string;
+  url?: string;
+  category?: string;
+  categoryId?: string;
+  categoryColor?: string;
+  color?: string;
+  icon?: string;
+  toolCount?: number;
+}
 
 export interface SunburstData {
   value: number;
@@ -53,7 +66,7 @@ export interface SunburstData {
   providedIn: 'root'
 })
 export class ApiService {
-  private baseUrl = 'https://ai-backend-358895512845.asia-south1.run.app/api';
+  private baseUrl = 'https://ai-server-859193427822.asia-south1.run.app/api';
 
   constructor(private http: HttpClient) {}
 

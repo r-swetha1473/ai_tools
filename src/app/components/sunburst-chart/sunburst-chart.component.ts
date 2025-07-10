@@ -4,12 +4,20 @@ import * as d3 from 'd3';
 import { SunburstData } from '../../services/api.service';
 import { ThemeService } from '../../services/theme.service';
 import { Subject, takeUntil } from 'rxjs';
+import { SearchResult } from '../../services/api.service';
+
 
 @Component({
   selector: 'app-sunburst-chart',
   template: `
     <div class="sunburst-container">
+         <div class="controls">
+    <!-- <button class="btn btn-secondary" (click)="expandAll()">Expand All</button>
+    <button class="btn btn-secondary" (click)="collapseAll()">Collapse All</button> -->
+    <button class="btn btn-secondary" (click)="resetZoom()">Reset View</button>
+  </div>
       <div class="chart-wrapper">
+           
         <svg #svgElement class="sunburst-svg"></svg>
         
         <!-- Center Navigation -->
@@ -127,18 +135,68 @@ import { Subject, takeUntil } from 'rxjs';
     </div>
   `,
   styles: [`
-    .sunburst-container {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 700px;
-      background: var(--chart-bg);
-      border-radius: 20px;
-      overflow: hidden;
-    }
+ .sunburst-container {
+  position: relative; /* Needed for absolute children */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 700px;
+  background: var(--chart-bg);
+  border-radius: 20px;
+  overflow: hidden;
+}.btn-primary {
+    background-color: var(--primary-600);
+    color: #fff
+}
+.btn {
+    display: inline-flex
+;
+    align-items: center;
+    justify-content: center;
+    padding: .75rem
+ 1.5rem;
+    border: none;
+    border-radius: .5rem;
+    font-size: .875rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all .2s ease;
+    white-space: nowrap;
+}
+.btn-primary:hover {
+    background-color: var(--primary-700);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg)
+}
+
+.btn-secondary {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border)
+}
+
+.btn-secondary:hover {
+    background-color: var(--bg-tertiary);
+    transform: translateY(-1px)
+}
+
+.controls {
+  position: absolute;
+  top: 1rem;
+  
+  right: 1rem;
+  z-index: 100;
+  display: flex;
+  gap: 0.5rem;
+  background-color: var(--bg-primary);
+  padding: 0.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
 
     .chart-wrapper {
       position: relative;
@@ -164,7 +222,36 @@ import { Subject, takeUntil } from 'rxjs';
       filter: drop-shadow(0 0 8px #f59e0b) brightness(1.2);
       stroke: #f59e0b !important;
       stroke-width: 3px !important;
+    }.sunburst-container {
+      background: linear-gradient(135deg, #fdfbfb, #ebedee);
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
     }
+
+    :host-context([data-theme="dark"]) .sunburst-container {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+    }
+    text {
+      pointer-events: none;
+      fill: #1e293b;
+      font-size: 12px;
+      font-weight: bold;
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
+    }
+
+    :host-context([data-theme="dark"]) text {
+      fill: #f1f5f9;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+    .sunburst-svg .highlighted {
+      stroke: url(#glow-gradient);
+      stroke-width: 4px !important;
+      filter: drop-shadow(0 0 10px #f59e0b);
+    }
+    .tooltip {
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
 
     .sunburst-svg .parent-highlighted {
       filter: drop-shadow(0 0 6px #3b82f6) brightness(1.1);
@@ -518,6 +605,7 @@ import { Subject, takeUntil } from 'rxjs';
 
     /* Light theme */
     :host-context([data-theme="light"]) {
+      --border: #e2e8f0;
       --chart-bg: rgba(255, 255, 255, 0.95);
       --center-bg: rgba(255, 255, 255, 0.95);
       --center-border: rgba(226, 232, 240, 0.8);
@@ -576,6 +664,7 @@ import { Subject, takeUntil } from 'rxjs';
       --tooltip-type: #94a3b8;
       --tooltip-description: #cbd5e1;
       --rating-value: #f1f5f9;
+      --border: #e2e8f0;
       --star-empty: #475569;
       --star-filled: #fbbf24;
       --stat-label: #94a3b8;
@@ -609,198 +698,154 @@ import { Subject, takeUntil } from 'rxjs';
         max-width: 280px;
         min-width: 220px;
       }
+      text {
+  pointer-events: none;
+  text-shadow: 0 0 2px white;
+  font-weight: bold;
+}text {
+  font-size: 10px;
+  fill: #333;
+  background: white;
+  border-radius: 9999px;
+  padding: 2px 6px;
+}
+
+
     }
   `],
   standalone: true,
   imports: [CommonModule]
 })
-export class SunburstChartComponent implements OnInit, OnDestroy, AfterViewInit {
-  @ViewChild('svgElement', { static: true }) svgElement!: ElementRef;
+export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() data!: SunburstData;
   @Output() categorySelect = new EventEmitter<string>();
+  @ViewChild('svgElement', { static: true }) svgElement!: ElementRef<SVGSVGElement>;
 
   private destroy$ = new Subject<void>();
-  private svg!: d3.Selection<SVGSVGElement, unknown, null, undefined>;
-  private g: any;
   private radius = 0;
-  private root: any;
+  private arc: any;
   private path: any;
-  private label: any;
-  private parent: any;
-  private isDarkMode = false;
-  private highlightedTool: any = null;
-  private highlightedCategory: any = null;
+  private g: any;
+  private labels: any;
 
-  currentFocus: any = null;
-  centerInfo: any = null;
-  totalCategories = 0;
-  totalTools = 0;
+  public root: any;
+  public currentFocus: any = null;
+  public centerInfo: any = null;
+  public totalCategories = 0;
+  public totalTools = 0;
 
-  tooltipVisible = false;
-  tooltipX = 0;
-  tooltipY = 0;
-  tooltipData: any = {};
+  public tooltipVisible = false;
+  public tooltipX = 0;
+  public tooltipY = 0;
+  public tooltipData: any = {};
 
   constructor(private themeService: ThemeService) {}
 
   ngOnInit() {
-    this.themeService.isDarkMode().pipe(takeUntil(this.destroy$)).subscribe(isDark => {
-      this.isDarkMode = isDark;
-      if (this.svg) this.updateColors();
-    });
+    this.themeService.isDarkMode().pipe(takeUntil(this.destroy$)).subscribe();
   }
 
   ngAfterViewInit() {
-    if (this.data) {
-      this.createChart();
-    } else {
-      console.error('Sunburst data is missing');
-    }
+    if (this.data) this.createChart();
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  private createChart() {
-    const element = this.svgElement.nativeElement;
-    const size = Math.min(element.parentElement!.offsetWidth, 700);
-    this.radius = size / 2;
-
-    d3.select(element).selectAll('*').remove();
-    this.svg = d3.select(element)
-      .attr('width', size)
-      .attr('height', size)
-      .attr('viewBox', `${-this.radius} ${-this.radius} ${size} ${size}`);
-
-    this.root = d3.hierarchy(this.data).sum(d => d.value || 1).sort((a, b) => (b.value || 0) - (a.value || 0));
-    const partition = d3.partition().size([2 * Math.PI, this.radius * this.radius]);
-    partition(this.root);
-    this.root.each((d: any) => d.current = d);
-
-    this.totalCategories = this.data.children.length;
-    this.totalTools = this.data.children.reduce((sum, cat) => sum + cat.children.length, 0);
-
-    const color = d3.scaleOrdinal(d3.quantize(d3.interpolateRainbow, this.data.children.length + 1));
-
-    const arc = d3.arc()
-      .startAngle((d: any) => d.x0)
-      .endAngle((d: any) => d.x1)
-      .padAngle(1 / this.radius)
-      .padRadius(this.radius)
-      .innerRadius((d: any) => Math.sqrt(d.y0))
-      .outerRadius((d: any) => Math.sqrt(d.y1) - 1);
-
-    this.g = this.svg.append('g');
-
-    this.path = this.g.append('g')
-      .selectAll('path')
-      .data(this.root.descendants().slice(1))
-      .join('path')
-      .attr('fill', (d: any) => this.getFillColor(d, color))
-      .attr('d', (d: any) => arc(d.current))
-      .style('cursor', (d: any) => d.depth === 2 && d.data.url ? 'pointer' : 'pointer')
-      .on('click', (event: any, d: any) => this.clicked(event, d))
-      .on('mouseover', (event: any, d: any) => this.showTooltip(event, d))
-      .on('mousemove', (event: any) => this.updateTooltip(event))
-      .on('mouseout', () => this.hideTooltip());
-
-    this.label = this.g.append('g')
-      .attr('pointer-events', 'none')
-      .attr('text-anchor', 'middle')
-      .selectAll('text')
-      .data(this.root.descendants().slice(1))
-      .join('text')
-      .attr('dy', '0.35em')
-      .attr('transform', (d: any) => this.labelTransform(d.current))
-      .text((d: any) => d.data.name)
-      .style('fill', this.isDarkMode ? '#f1f5f9' : '#1e293b')
-      .style('font-size', '10px')
-      .style('font-weight', '500');
-
-    this.parent = this.g.append('circle')
-      .datum(this.root)
-      .attr('r', this.radius)
-      .attr('fill', 'none')
-      .attr('pointer-events', 'all')
-      .style('cursor', 'pointer')
-      .on('click', (event: any, d: any) => this.clicked(event, d));
-
-    this.setCenterInfo();
-  }
-
-  private getFillColor(d: any, color: any) {
-    if (d.depth === 1) return d.data.color || color(d.data.name);
-    const parentColor = d.parent.data.color || color(d.parent.data.name);
-    const colorObj = d3.color(parentColor);
-    return colorObj ? colorObj.brighter(0.3).toString() : parentColor;
-  }
-
-  public highlightTool(toolName: string) {
-    this.clearHighlights();
-    
-    const tool = this.root.descendants().find(
-      (d: any) => d.depth === 2 && d.data.name.toLowerCase() === toolName.toLowerCase()
-    );
-
-    if (!tool) return;
-
-    const parentCategory = tool.ancestors().find((d: any) => d.depth === 1);
-    
-    // Zoom to parent category first
-    this.clicked(null, parentCategory);
-
-    // Highlight after zoom animation completes
-    setTimeout(() => {
-      this.highlightedTool = tool;
-      this.highlightedCategory = parentCategory;
-
-      this.path
-        .classed('highlighted', (d: any) => d === tool)
-        .classed('parent-highlighted', (d: any) => d === parentCategory);
-    }, 800);
-  }
-
-  public highlightCategory(categoryId: string) {
-    this.clearHighlights();
-    
-    const category = this.root.descendants().find(
-      (d: any) => d.depth === 1 && d.data.id === categoryId
-    );
-
-    if (!category) return;
-
-    this.highlightedCategory = category;
-    
-    this.path.classed('parent-highlighted', (d: any) => d === category);
-    
-    // Zoom to category
-    this.clicked(null, category);
-  }
-
-  private clearHighlights() {
-    this.highlightedTool = null;
-    this.highlightedCategory = null;
-    
-    if (this.path) {
-      this.path
-        .classed('highlighted', false)
-        .classed('parent-highlighted', false);
+  public handleSearchResult(result: SearchResult) {
+    if (result.type === 'category') {
+      this.highlightCategory(result.id);
+    } else if (result.type === 'tool') {
+      this.highlightTool(result.name);
     }
   }
 
+  private createChart() {
+    const element = this.svgElement.nativeElement;
+    const width = element.clientWidth;
+    this.radius = width / 2;
+
+    const svg = d3.select(element)
+      .attr('width', width)
+      .attr('height', width)
+      .append('g')
+      .attr('transform', `translate(${this.radius},${this.radius})`);
+
+    this.g = svg;
+
+    const baseColors = ['#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#9D4EDD', '#F72585', '#00F5D4', '#F15BB5', '#F4A261', '#8338EC'];
+    const categoryColors = new Map<string, string>();
+    this.data.children.forEach((cat, i) => {
+      categoryColors.set(cat.name, baseColors[i % baseColors.length]);
+    });
+
+    const color = (d: any) => {
+      const parentName = d.depth === 1 ? d.data.name : d.parent?.data?.name;
+      const baseColor = categoryColors.get(parentName) || '#999';
+      const base = d3.color(baseColor);
+      if (!base) return '#ccc';
+      if (d.depth === 1) return base.darker(0.8).formatHex();
+      if (d.depth === 2) return base.brighter(1.2).formatHex();
+      return '#eee';
+    };
+
+    svg.append('defs').append('linearGradient')
+      .attr('id', 'glow-gradient')
+      .attr('x1', '0%').attr('x2', '100%')
+      .attr('y1', '0%').attr('y2', '100%')
+      .selectAll('stop')
+      .data([
+        { offset: '0%', color: '#fbbf24' },
+        { offset: '100%', color: '#f59e0b' }
+      ])
+      .enter()
+      .append('stop')
+      .attr('offset', d => d.offset)
+      .attr('stop-color', d => d.color);
+
+    this.root = d3.hierarchy(this.data)
+      .sum((d: any) => d.value || 1)
+      .sort((a, b) => (b.value || 0) - (a.value || 0));
+    d3.partition().size([2 * Math.PI, this.radius])(this.root);
+    this.root.each((d: any) => (d.current = d));
+
+    this.totalCategories = this.data.children.length;
+    this.totalTools = this.data.children.reduce((total, cat) => total + cat.children.length, 0);
+
+    this.arc = d3.arc()
+      .startAngle((d: any) => d.x0)
+      .endAngle((d: any) => d.x1)
+      .innerRadius((d: any) => d.y0)
+      .outerRadius((d: any) => d.y1);
+
+    this.path = svg.append('g')
+      .selectAll('path')
+      .data(this.root.descendants().slice(1))
+      .join('path')
+      .attr('fill', (d: any) => color(d))
+      .attr('stroke', '#fff')
+      .attr('stroke-width', 1)
+      .attr('d', (d: any) => this.arc(d.current))
+      .on('click', (event, d) => this.clicked(event, d))
+      .on('mouseover', (event, d) => this.showTooltip(event, d))
+      .on('mousemove', (event) => this.updateTooltip(event))
+      .on('mouseout', () => this.hideTooltip());
+
+    this.labels = svg.append('g').attr('pointer-events', 'none').attr('class', 'labels');
+    this.updateLabels();
+    this.setCenterInfo();
+  }
+
   private clicked(event: any, p: any) {
-    // Handle tool clicks - open URL
     if (p.depth === 2 && p.data.url) {
       window.open(p.data.url, '_blank');
       return;
     }
 
-    // Clear highlights when zooming
-    this.clearHighlights();
-
-    this.parent.datum(p.depth ? p.parent : this.root);
+    this.currentFocus = p.depth ? p : null;
+    this.setCenterInfo();
 
     this.root.each((d: any) => {
       d.target = {
@@ -811,73 +856,95 @@ export class SunburstChartComponent implements OnInit, OnDestroy, AfterViewInit 
       };
     });
 
-    const t = this.g.transition().duration(750);
+    const transition = this.g.transition().duration(750);
 
-    this.path.transition(t)
+    this.path.transition(transition)
       .tween('data', (d: any) => {
         const i = d3.interpolate(d.current, d.target);
-        return (t: number) => d.current = i(t);
+        return (t: number) => (d.current = i(t));
       })
       .attrTween('d', (d: any) => () => this.arc(d.current))
-      .attr('fill-opacity', (d: any) =>
-        this.arcVisible(d.current) && this.isDescendantOrSelf(d, p)
-          ? (d.children ? 0.6 : 0.4)
-          : 0
-      )
-      .attr('pointer-events', (d: any) =>
-        this.arcVisible(d.current) && this.isDescendantOrSelf(d, p)
-          ? 'auto'
-          : 'none');
-
-    this.label.transition(t)
-      .attr('fill-opacity', (d: any) =>
-        this.labelVisible(d.current) && this.isDescendantOrSelf(d, p) ? 1 : 0
-      )
-      .attrTween('transform', (d: any) => () => this.labelTransform(d.current));
-
-    this.currentFocus = p.depth ? p : null;
-    this.setCenterInfo();
-
-    if (p.depth === 1) {
-      this.categorySelect.emit(p.data.id);
-    }
+      .end()
+      .then(() => this.updateLabels())
+      .catch(() => {});
   }
 
-  private arcVisible(d: any): boolean {
-    return d.y1 <= 3 && d.y0 >= 1 && (d.x1 > d.x0);
+  private updateLabels() {
+    if (!this.labels || !this.arc) return;
+
+    const visibleNodes = this.root.descendants().slice(1).filter((d: any) => {
+      const angle = d.current.x1 - d.current.x0;
+      const radius = d.current.y1 - d.current.y0;
+      return angle > 0.15 && radius > 10;
+    });
+
+    const text = this.labels.selectAll('text')
+      .data(visibleNodes, (d: any) => d.data.name);
+
+   text.join(
+  (enter: any) => enter.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('alignment-baseline', 'middle')
+    .style('font-size', '10px')
+    .style('fill', '#333')
+    .style('pointer-events', 'none')
+    .text((d: any) => d.data.name)
+    .attr('transform', (d: any) => {
+      const [x, y] = this.arc.centroid(d.current);
+      return `translate(${x}, ${y})`;
+    }),
+
+  (update: any) => update
+    .text((d: any) => d.data.name)
+    .transition()
+    .duration(750)
+    .attr('transform', (d: any) => {
+      const [x, y] = this.arc.centroid(d.current);
+      return `translate(${x}, ${y})`;
+    }),
+
+  (exit: any) => exit.remove()
+);
+
   }
 
-  private labelVisible(d: any): boolean {
-    return d.y1 <= 3 && d.y0 >= 1 && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.03;
-  }
-
-  private isDescendantOrSelf(node: any, ancestor: any): boolean {
-    while (node) {
-      if (node === ancestor) return true;
-      node = node.parent;
-    }
-    return false;
-  }
-
-  private arc = d3.arc()
-    .startAngle((d: any) => d.x0)
-    .endAngle((d: any) => d.x1)
-    .innerRadius((d: any) => Math.sqrt(d.y0))
-    .outerRadius((d: any) => Math.sqrt(d.y1) - 1);
-
-  private labelTransform(d: any) {
-    const x = ((d.x0 + d.x1) / 2) * 180 / Math.PI;
-    const y = (Math.sqrt(d.y0) + Math.sqrt(d.y1)) / 2;
-    return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
-  }
-
-  resetZoom() {
-    this.clearHighlights();
+  public resetZoom() {
     this.clicked(null, this.root);
   }
 
-  zoomToSearchResult(categoryId: string) {
-    this.highlightCategory(categoryId);
+  public getCategoryIcon(id: string): string {
+    const icons: Record<string, string> = {
+      'text-generation': '✍️',
+      'image-generation': '🎨',
+      'code-generation': '💻'
+    };
+    return icons[id] || '🔧';
+  }
+
+  private showTooltip(event: MouseEvent, d: any) {
+    if (!d || d.depth === 0) return;
+    this.tooltipData = {
+      title: d.data.name,
+      description: d.data.description || '',
+      type: d.data.type || '',
+      icon: '🔧',
+      color: '#000',
+      rating: d.data.rating || 0,
+      stats: d.data.stats || {},
+      url: d.data.url || ''
+    };
+    this.tooltipX = event.offsetX;
+    this.tooltipY = event.offsetY;
+    this.tooltipVisible = true;
+  }
+
+  private updateTooltip(event: MouseEvent) {
+    this.tooltipX = event.offsetX;
+    this.tooltipY = event.offsetY;
+  }
+
+  private hideTooltip() {
+    this.tooltipVisible = false;
   }
 
   private setCenterInfo() {
@@ -888,26 +955,14 @@ export class SunburstChartComponent implements OnInit, OnDestroy, AfterViewInit 
     };
   }
 
-  public getCategoryIcon(id: string): string {
-    const icons: { [key: string]: string } = {
-      'text-generation': '✍️',
-      'image-generation': '🎨',
-      'code-generation': '💻',
-      'audio-processing': '🎵',
-      'video-generation': '🎬',
-      'data-analysis': '📊',
-      'design-tools': '🎯',
-      'productivity': '⚡',
-      'translation': '🌐',
-      'customer-support': '💬',
-      'marketing': '📈',
-      'research': '🔬',
-      'education': '🎓',
-      'healthcare': '🏥',
-      'finance': '💰',
-      'legal-tech': '⚖️'
-    };
-    return icons[id] || '🔧';
+  public highlightCategory(categoryId: string) {
+    const category = this.root.descendants().find((d: any) => d.depth === 1 && d.data.id === categoryId);
+    if (category) this.clicked(null, category);
+  }
+
+  public highlightTool(toolName: string) {
+    const tool = this.root.descendants().find((d: any) => d.depth === 2 && d.data.name.toLowerCase() === toolName.toLowerCase());
+    if (tool) this.clicked(null, tool.parent);
   }
 
   public getAveragePopularity(node: any): number {
@@ -916,64 +971,21 @@ export class SunburstChartComponent implements OnInit, OnDestroy, AfterViewInit 
     return Math.round(total / node.children.length);
   }
 
-  private showTooltip(event: any, d: any) {
-    if (d.depth === 0) return;
-    const isCategory = d.depth === 1;
-    const isTool = d.depth === 2;
-
-    this.tooltipData = {
-      title: d.data.name,
-      description: d.data.description || '',
-      type: isCategory ? 'Category' : 'AI Tool',
-      color: isCategory ? d.data.color : d.parent.data.color,
-      icon: isCategory ? this.getCategoryIcon(d.data.id) : '🛠️',
-      rating: isTool ? this.generateRating(d.data.value || 0) : 0,
-      stats: isTool ? { popularity: d.data.value || 0 } : null,
-      url: d.data.url || ''
-    };
-
-    this.tooltipVisible = true;
-    this.updateTooltip(event);
-  }
-
-  private updateTooltip(event: any) {
-    const rect = this.svgElement.nativeElement.getBoundingClientRect();
-    this.tooltipX = event.clientX - rect.left + 15;
-    this.tooltipY = event.clientY - rect.top - 15;
-  }
-
-  private hideTooltip() {
-    this.tooltipVisible = false;
-  }
-
-  private generateRating(popularity: number): number {
-    return Math.max(1, Math.min(5, Math.round((popularity / 100) * 4 + 1)));
-  }
-
-  getStars(rating: number): boolean[] {
+  public getStars(rating: number): boolean[] {
     return Array(5).fill(false).map((_, i) => i < rating);
   }
 
-  openTool(url: string) {
+  public openTool(url: string) {
     if (url) window.open(url, '_blank');
   }
 
-  shareTool(toolData: any) {
+  public shareTool(toolData: any) {
     const shareText = `${toolData.title}: ${toolData.url}`;
     if (navigator.share) {
-      navigator.share({
-        title: toolData.title,
-        text: toolData.description,
-        url: toolData.url
-      });
+      navigator.share({ title: toolData.title, text: toolData.description, url: toolData.url });
     } else {
       navigator.clipboard.writeText(shareText);
     }
   }
-
-  private updateColors() {
-    if (this.label) {
-      this.label.style('fill', this.isDarkMode ? '#f1f5f9' : '#1e293b');
-    }
-  }
 }
+

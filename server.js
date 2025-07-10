@@ -1,10 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-
+const morgan = require('morgan');
 const app = express();
-const PORT = 3001;
-
+const PORT = process.env.PORT || 8080;
+app.use(morgan('dev'));
 app.use(cors());
 app.use(express.json());
 
@@ -131,6 +131,22 @@ app.get('/api/categories', (req, res) => {
   res.json(categories);
 });
 
+app.get('/api/tool/:id', (req, res) => {
+  for (const category of aiToolsData.categories) {
+    const tool = category.tools.find(t => t.id === req.params.id);
+    if (tool) {
+      return res.json({
+        type: 'tool',
+        ...tool,
+        category: category.name,
+        categoryId: category.id,
+        categoryColor: category.color
+      });
+    }
+  }
+  res.status(404).json({ error: 'Tool not found' });
+});
+
 app.get('/api/categories/:id', (req, res) => {
   const category = aiToolsData.categories.find(cat => cat.id === req.params.id);
   if (!category) {
@@ -199,6 +215,6 @@ app.get('/api/sunburst-data', (req, res) => {
   res.json(sunburstData);
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });
