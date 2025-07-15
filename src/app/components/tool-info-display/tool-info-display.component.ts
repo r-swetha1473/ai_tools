@@ -96,9 +96,10 @@ export interface CategoryInfo {
             <button class="tool-card-btn" (click)="visitToolUrl(tool.url); $event.stopPropagation()" *ngIf="tool.url">
               Visit Tool
             </button>
-            <button class="tool-card-btn secondary" (click)="shareTool(tool); $event.stopPropagation()">
-              Share
-            </button>
+            <button class="tool-card-btn secondary" (click)="shareTool.emit(tool); $event.stopPropagation()">
+  Share
+</button>
+
           </div>
         </div>
       </div>
