@@ -15,6 +15,13 @@ export interface ToolClickData {
   popularity: number;
 }
 
+export interface CategoryClickData {
+  name: string;
+  description: string;
+  color: string;
+  tools: ToolClickData[];
+}
+
 @Component({
   selector: 'app-sunburst-chart',
   template: `
@@ -481,7 +488,7 @@ export interface ToolClickData {
 })
 export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() data!: SunburstData;
-  @Output() categorySelect = new EventEmitter<string>();
+  @Output() categorySelect = new EventEmitter<CategoryClickData>();
   @Output() toolClick = new EventEmitter<ToolClickData>();
   @ViewChild('svgElement', { static: true }) svgElement!: ElementRef<SVGSVGElement>;
 
@@ -597,7 +604,7 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
 
   private clicked(event: any, p: any) {
     // Handle tool (leaf node) clicks
-    if (p.depth === 2 && p.data.url) {
+    if (p.depth === 2) {
       const toolData: ToolClickData = {
         name: p.data.name,
         description: p.data.description,
@@ -608,6 +615,24 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
       };
       this.toolClick.emit(toolData);
       return;
+    }
+
+    // Handle category clicks
+    if (p.depth === 1) {
+      const categoryData: CategoryClickData = {
+        name: p.data.name,
+        description: p.data.description,
+        color: p.data.color,
+        tools: p.children.map((child: any) => ({
+          name: child.data.name,
+          description: child.data.description,
+          url: child.data.url,
+          category: p.data.name,
+          categoryColor: p.data.color,
+          popularity: child.data.value || 0
+        }))
+      };
+      this.categorySelect.emit(categoryData);
     }
 
     this.currentFocus = p.depth ? p : null;
@@ -686,7 +711,15 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
       'video-generation': '🎬',
       'data-analysis': '📊',
       'design-tools': '🎯',
-      'productivity': '⚡'
+      'productivity': '⚡',
+      'translation': '🌐',
+      'customer-support': '💬',
+      'marketing': '📢',
+      'research': '🔬',
+      'education': '📚',
+      'healthcare': '🏥',
+      'finance': '💰',
+      'legal-tech': '⚖️'
     };
     return icons[id] || '🔧';
   }

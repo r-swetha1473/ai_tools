@@ -6,7 +6,7 @@ import { SunburstChartComponent } from './app/components/sunburst-chart/sunburst
 import { SearchBarComponent } from './app/components/search-bar/search-bar.component';
 import { ThemeToggleComponent } from './app/components/theme-toggle/theme-toggle.component';
 import { TabsComponent } from './app/components/tabs/tabs.component';
-import { ToolCardComponent, ToolCardData } from './app/components/tool-card/tool-card.component';
+import { ToolInfoDisplayComponent, ToolInfo, CategoryInfo } from './app/components/tool-info-display/tool-info-display.component';
 import { ApiService, SunburstData, SearchResult } from './app/services/api.service';
 import { ThemeService } from './app/services/theme.service';
 
@@ -83,15 +83,6 @@ import { ThemeService } from './app/services/theme.service';
 
       <!-- Main Content -->
       <main class="app-main">
-        <!-- Tool Card Modal -->
-        <app-tool-card
-          [toolData]="selectedTool"
-          [isVisible]="showToolCard"
-          (close)="closeToolCard()"
-          (visitTool)="visitTool($event)"
-          (shareTool)="shareTool($event)">
-        </app-tool-card>
-
         <!-- Sunburst Visualization -->
         <section class="visualization-section">
           <div class="section-header">
@@ -105,7 +96,7 @@ import { ThemeService } from './app/services/theme.service';
             <app-sunburst-chart 
               #sunburstChart
               [data]="sunburstData"
-              (categorySelect)="onCategorySelect($event)"
+              (categorySelect)="onCategoryClick($event)"
               (toolClick)="onToolClick($event)">
             </app-sunburst-chart>
           </div>
@@ -119,6 +110,15 @@ import { ThemeService } from './app/services/theme.service';
             <p class="loading-text">Loading AI tools universe...</p>
           </div>
         </section>
+        <!-- Tool/Category Info Display -->
+        <app-tool-info-display
+          [selectedTool]="selectedTool"
+          [selectedCategory]="selectedCategory"
+          (visitTool)="visitTool($event)"
+          (shareTool)="shareTool($event)"
+          (toolSelect)="onToolSelect($event)">
+        </app-tool-info-display>
+
    <!-- Tabs Navigation -->
         <div class="tabs-wrapper">
           <app-tabs></app-tabs>
@@ -797,7 +797,7 @@ import { ThemeService } from './app/services/theme.service';
     SearchBarComponent,
     ThemeToggleComponent,
     TabsComponent,
-    ToolCardComponent
+    ToolInfoDisplayComponent
   ]
 })
 export class App implements OnInit {
@@ -806,8 +806,8 @@ export class App implements OnInit {
   sunburstData: SunburstData | null = null;
   totalCategories = 0;
   totalTools = 0;
-  selectedTool: ToolCardData | null = null;
-  showToolCard = false;
+  selectedTool: ToolInfo | null = null;
+  selectedCategory: CategoryInfo | null = null;
 
   constructor(
     private apiService: ApiService,
@@ -835,6 +835,10 @@ export class App implements OnInit {
   }
 
   onSearchResult(result: SearchResult) {
+    // Clear previous selections
+    this.selectedTool = null;
+    this.selectedCategory = null;
+    
     if (result.type === 'category' && result.id) {
       this.sunburstChart?.highlightCategory(result.id);
     } else if (result.type === 'tool' && result.name) {
@@ -842,33 +846,31 @@ export class App implements OnInit {
     }
   }
 
-  onCategorySelect(categoryId: string) {
-    console.log('Category selected:', categoryId);
+  onCategoryClick(categoryData: CategoryInfo) {
+    this.selectedCategory = categoryData;
+    this.selectedTool = null;
   }
 
   onToolClick(toolData: any) {
-    this.selectedTool = {
-      name: toolData.name,
-      description: toolData.description,
-      url: toolData.url,
-      category: toolData.category,
-      categoryColor: toolData.categoryColor,
-      popularity: toolData.popularity
-    };
-    this.showToolCard = true;
+    this.selectedTool = toolData;
+    this.selectedCategory = null;
   }
 
-  closeToolCard() {
-    this.showToolCard = false;
+  onToolSelect(toolData: ToolInfo) {
+    this.selectedTool = toolData;
+    this.selectedCategory = null;
+  }
+
+  clearSelections() {
     this.selectedTool = null;
+    this.selectedCategory = null;
   }
 
   visitTool(url: string) {
     window.open(url, '_blank');
-    this.closeToolCard();
   }
 
-  shareTool(toolData: ToolCardData) {
+  shareTool(toolData: ToolInfo) {
     const shareText = `Check out ${toolData.name}: ${toolData.description}`;
     const shareUrl = toolData.url || '';
     
@@ -882,7 +884,6 @@ export class App implements OnInit {
       // Fallback to clipboard
       const textToShare = `${shareText}\n${shareUrl}`;
       navigator.clipboard.writeText(textToShare).then(() => {
-        // You could show a toast notification here
         console.log('Tool shared to clipboard');
       }).catch(console.error);
     }

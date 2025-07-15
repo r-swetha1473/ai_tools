@@ -21,6 +21,7 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
           [(ngModel)]="searchQuery"
           (input)="onSearchInput($event)"
           (focus)="onFocus()"
+          (blur)="onBlur()"
           (keydown)="onKeyDown($event)"
           autocomplete="off"
         />
@@ -37,7 +38,7 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
         *ngIf="showResults && (searchResults.length > 0 || (searchQuery && searchResults.length === 0))"
         [class.mobile-results]="isMobile"
       >
-        <div *ngIf="searchResults.length > 0">
+        <div *ngIf="searchResults.length > 0" class="results-content">
           <div *ngFor="let result of searchResults; let i = index">
             <div *ngIf="isFirstOfType(i, result.type)" class="results-header">
               {{ result.type === 'category' ? 'Categories' : 'Tools' }}
@@ -45,7 +46,7 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
             <div
               class="search-result-item"
               [class.selected]="i === selectedIndex"
-              (click)="selectResult(result)"
+              (mousedown)="selectResult(result)"
               (mouseenter)="selectedIndex = i"
             >
               <div class="result-icon" [style.background-color]="getResultColor(result)">
@@ -72,7 +73,7 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
   styles: [`
     .search-container {
       position: relative;
-      z-index: 100;
+      z-index: 200;
       width: 100%;
       max-width: 600px;
       margin: 0 auto;
@@ -150,9 +151,9 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
       background: var(--results-bg);
       border: 1px solid var(--results-border);
       border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
       backdrop-filter: blur(20px);
-      z-index: 1000;
+      z-index: 10000;
       animation: slideDown 0.2s ease-out;
     }
 
@@ -162,7 +163,11 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
       left: 16px;
       right: 16px;
       max-height: 60vh;
-      z-index: 9999;
+      z-index: 10001;
+    }
+
+    .results-content {
+      padding: 8px 0;
     }
 
     .results-header {
@@ -174,6 +179,9 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
       background-color: var(--results-header-bg);
       border-bottom: 1px solid var(--results-divider);
       letter-spacing: 0.5px;
+      position: sticky;
+      top: 0;
+      z-index: 1;
     }
 
     .search-result-item {
@@ -287,6 +295,25 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
       }
     }
 
+    /* Custom scrollbar for results */
+    .search-results::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .search-results::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+      border-radius: 3px;
+    }
+
+    .search-results::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: 3px;
+    }
+
+    .search-results::-webkit-scrollbar-thumb:hover {
+      background: var(--scrollbar-thumb-hover);
+    }
+
     /* Mobile specific styles */
     @media (max-width: 768px) {
       .search-input {
@@ -297,7 +324,7 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
       .search-results.mobile-results {
         border-radius: 12px;
         margin-top: 8px;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
       }
 
       .search-result-item {
@@ -343,6 +370,9 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
       --results-category: #64748b;
       --highlight-bg: rgba(59, 130, 246, 0.2);
       --highlight-text: #1e293b;
+      --scrollbar-track: #f1f5f9;
+      --scrollbar-thumb: #cbd5e1;
+      --scrollbar-thumb-hover: #94a3b8;
     }
 
     /* Dark theme */
@@ -365,6 +395,9 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
       --results-category: #94a3b8;
       --highlight-bg: rgba(96, 165, 250, 0.3);
       --highlight-text: #f1f5f9;
+      --scrollbar-track: #1e293b;
+      --scrollbar-thumb: #475569;
+      --scrollbar-thumb-hover: #64748b;
     }
   `],
   standalone: true,
@@ -391,7 +424,6 @@ export class SearchBarComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.checkMobile();
     this.setupSearch();
-    this.setupClickOutside();
     
     window.addEventListener('resize', () => this.checkMobile());
   }
@@ -411,7 +443,7 @@ export class SearchBarComponent implements OnInit, OnDestroy {
 
   private setupSearch() {
     this.searchInput$.pipe(
-      debounceTime(300),
+      debounceTime(200),
       distinctUntilChanged(),
       switchMap(query => {
         if (!query.trim()) {
@@ -420,17 +452,16 @@ export class SearchBarComponent implements OnInit, OnDestroy {
         return this.apiService.search(query);
       }),
       takeUntil(this.destroy$)
-    ).subscribe(results => {
-      this.searchResults = results;
-      this.showResults = true;
-      this.selectedIndex = -1;
-    });
-  }
-
-  private setupClickOutside() {
-    document.addEventListener('click', (event) => {
-      if (!this.searchContainer.nativeElement.contains(event.target as Node)) {
-        this.hideResults();
+    ).subscribe({
+      next: (results) => {
+        this.searchResults = results;
+        this.showResults = true;
+        this.selectedIndex = -1;
+      },
+      error: (error) => {
+        console.error('Search error:', error);
+        this.searchResults = [];
+        this.showResults = false;
       }
     });
   }
@@ -450,15 +481,20 @@ export class SearchBarComponent implements OnInit, OnDestroy {
       clearTimeout(this.blurTimeout);
     }
     
-    if (this.searchQuery.trim() && this.searchResults.length > 0) {
-      this.showResults = true;
+    if (this.searchQuery.trim()) {
+      this.searchInput$.next(this.searchQuery);
     }
+  }
+
+  onBlur() {
+    this.blurTimeout = setTimeout(() => {
+      this.hideResults();
+    }, 200);
   }
 
   onKeyDown(event: KeyboardEvent) {
     if (!this.showResults || this.searchResults.length === 0) {
       if (event.key === 'Enter' && this.searchQuery.trim()) {
-        // Trigger search if Enter is pressed with query but no results shown
         this.searchInput$.next(this.searchQuery);
       }
       return;
@@ -505,10 +541,8 @@ export class SearchBarComponent implements OnInit, OnDestroy {
   }
 
   private hideResults() {
-    this.blurTimeout = setTimeout(() => {
-      this.showResults = false;
-      this.selectedIndex = -1;
-    }, 150);
+    this.showResults = false;
+    this.selectedIndex = -1;
   }
 
   clearSearch() {
@@ -524,7 +558,6 @@ export class SearchBarComponent implements OnInit, OnDestroy {
     this.hideResults();
     this.searchResult.emit(result);
     
-    // Clear the timeout to prevent hiding after selection
     if (this.blurTimeout) {
       clearTimeout(this.blurTimeout);
     }
@@ -554,7 +587,15 @@ export class SearchBarComponent implements OnInit, OnDestroy {
         'video-generation': '🎬',
         'data-analysis': '📊',
         'design-tools': '🎯',
-        'productivity': '⚡'
+        'productivity': '⚡',
+        'translation': '🌐',
+        'customer-support': '💬',
+        'marketing': '📢',
+        'research': '🔬',
+        'education': '📚',
+        'healthcare': '🏥',
+        'finance': '💰',
+        'legal-tech': '⚖️'
       };
       return iconMap[result.id] || '🔧';
     }
