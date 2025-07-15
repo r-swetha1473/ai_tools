@@ -6,6 +6,7 @@ import { SunburstChartComponent } from './app/components/sunburst-chart/sunburst
 import { SearchBarComponent } from './app/components/search-bar/search-bar.component';
 import { ThemeToggleComponent } from './app/components/theme-toggle/theme-toggle.component';
 import { TabsComponent } from './app/components/tabs/tabs.component';
+import { ToolCardComponent, ToolCardData } from './app/components/tool-card/tool-card.component';
 import { ApiService, SunburstData, SearchResult } from './app/services/api.service';
 import { ThemeService } from './app/services/theme.service';
 
@@ -82,7 +83,14 @@ import { ThemeService } from './app/services/theme.service';
 
       <!-- Main Content -->
       <main class="app-main">
-     
+        <!-- Tool Card Modal -->
+        <app-tool-card
+          [toolData]="selectedTool"
+          [isVisible]="showToolCard"
+          (close)="closeToolCard()"
+          (visitTool)="visitTool($event)"
+          (shareTool)="shareTool($event)">
+        </app-tool-card>
 
         <!-- Sunburst Visualization -->
         <section class="visualization-section">
@@ -97,7 +105,8 @@ import { ThemeService } from './app/services/theme.service';
             <app-sunburst-chart 
               #sunburstChart
               [data]="sunburstData"
-              (categorySelect)="onCategorySelect($event)">
+              (categorySelect)="onCategorySelect($event)"
+              (toolClick)="onToolClick($event)">
             </app-sunburst-chart>
           </div>
 
@@ -787,7 +796,8 @@ import { ThemeService } from './app/services/theme.service';
     SunburstChartComponent,
     SearchBarComponent,
     ThemeToggleComponent,
-    TabsComponent
+    TabsComponent,
+    ToolCardComponent
   ]
 })
 export class App implements OnInit {
@@ -796,6 +806,8 @@ export class App implements OnInit {
   sunburstData: SunburstData | null = null;
   totalCategories = 0;
   totalTools = 0;
+  selectedTool: ToolCardData | null = null;
+  showToolCard = false;
 
   constructor(
     private apiService: ApiService,
@@ -832,6 +844,48 @@ export class App implements OnInit {
 
   onCategorySelect(categoryId: string) {
     console.log('Category selected:', categoryId);
+  }
+
+  onToolClick(toolData: any) {
+    this.selectedTool = {
+      name: toolData.name,
+      description: toolData.description,
+      url: toolData.url,
+      category: toolData.category,
+      categoryColor: toolData.categoryColor,
+      popularity: toolData.popularity
+    };
+    this.showToolCard = true;
+  }
+
+  closeToolCard() {
+    this.showToolCard = false;
+    this.selectedTool = null;
+  }
+
+  visitTool(url: string) {
+    window.open(url, '_blank');
+    this.closeToolCard();
+  }
+
+  shareTool(toolData: ToolCardData) {
+    const shareText = `Check out ${toolData.name}: ${toolData.description}`;
+    const shareUrl = toolData.url || '';
+    
+    if (navigator.share) {
+      navigator.share({
+        title: toolData.name,
+        text: shareText,
+        url: shareUrl
+      }).catch(console.error);
+    } else {
+      // Fallback to clipboard
+      const textToShare = `${shareText}\n${shareUrl}`;
+      navigator.clipboard.writeText(textToShare).then(() => {
+        // You could show a toast notification here
+        console.log('Tool shared to clipboard');
+      }).catch(console.error);
+    }
   }
 }
 

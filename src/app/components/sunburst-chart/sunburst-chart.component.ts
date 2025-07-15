@@ -6,23 +6,30 @@ import { ThemeService } from '../../services/theme.service';
 import { Subject, takeUntil } from 'rxjs';
 import { SearchResult } from '../../services/api.service';
 
+export interface ToolClickData {
+  name: string;
+  description: string;
+  url?: string;
+  category: string;
+  categoryColor: string;
+  popularity: number;
+}
 
 @Component({
   selector: 'app-sunburst-chart',
   template: `
     <div class="sunburst-container">
-         <div class="controls">
-    <!-- <button class="btn btn-secondary" (click)="expandAll()">Expand All</button>
-    <button class="btn btn-secondary" (click)="collapseAll()">Collapse All</button> -->
-    <button class="btn btn-secondary" (click)="resetZoom()">Reset View</button>
-  </div>
+      <div class="controls">
+        <button class="btn btn-secondary" (click)="resetZoom()">Reset View</button>
+      </div>
+      
       <div class="chart-wrapper">
-           
         <svg #svgElement class="sunburst-svg"></svg>
         
-        <!-- Center Navigation -->
-        <div class="center-navigation" *ngIf="centerInfo">
+        <!-- Enhanced Center Circle -->
+        <div class="center-circle" *ngIf="centerInfo">
           <div class="center-content">
+            <!-- Breadcrumb Navigation -->
             <div class="breadcrumb" *ngIf="currentFocus && currentFocus !== root">
               <button class="breadcrumb-item root" (click)="resetZoom()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -34,8 +41,14 @@ import { SearchResult } from '../../services/api.service';
               <span class="breadcrumb-current">{{ currentFocus.data.name }}</span>
             </div>
             
+            <!-- Root View -->
             <div class="center-info" *ngIf="!currentFocus || currentFocus === root">
-              <h3 class="center-title">AI Tools Universe</h3>
+              <div class="center-logo">
+                <div class="logo-ring">
+                  <div class="logo-inner">🤖</div>
+                </div>
+              </div>
+              <h3 class="center-title">AI Universe</h3>
               <p class="center-description">Click any category to explore</p>
               <div class="center-stats">
                 <div class="stat">
@@ -49,6 +62,7 @@ import { SearchResult } from '../../services/api.service';
               </div>
             </div>
             
+            <!-- Category View -->
             <div class="category-info" *ngIf="currentFocus && currentFocus !== root">
               <div class="category-header">
                 <div class="category-icon" [style.background]="currentFocus.data.color">
@@ -73,130 +87,60 @@ import { SearchResult } from '../../services/api.service';
           </div>
         </div>
       </div>
-      
-      <!-- Enhanced Tooltip -->
-      <div class="tooltip" 
-           [class.visible]="tooltipVisible" 
-           [style.left.px]="tooltipX" 
-           [style.top.px]="tooltipY">
-        <div class="tooltip-header">
-          <div class="tooltip-icon" [style.background]="tooltipData.color">
-            {{ tooltipData.icon }}
-          </div>
-          <div class="tooltip-info">
-            <h4 class="tooltip-title">{{ tooltipData.title }}</h4>
-            <span class="tooltip-type">{{ tooltipData.type }}</span>
-          </div>
-          <div class="tooltip-rating" *ngIf="tooltipData.rating">
-            <div class="rating-value">{{ tooltipData.rating }}/5</div>
-            <div class="rating-stars">
-              <span *ngFor="let star of getStars(tooltipData.rating)" 
-                    class="star" 
-                    [class.filled]="star">★</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="tooltip-body">
-          <p class="tooltip-description">{{ tooltipData.description }}</p>
-          
-          <div class="tooltip-stats" *ngIf="tooltipData.stats">
-            <div class="stat-row">
-              <span class="stat-label">Popularity</span>
-              <div class="popularity-bar">
-                <div class="popularity-fill" [style.width.%]="tooltipData.stats.popularity"></div>
-              </div>
-              <span class="stat-value">{{ tooltipData.stats.popularity }}%</span>
-            </div>
-          </div>
-          
-          <div class="tooltip-actions" *ngIf="tooltipData.url">
-            <button class="action-btn primary" (click)="openTool(tooltipData.url)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                <polyline points="15,3 21,3 21,9"></polyline>
-                <line x1="10" y1="14" x2="21" y2="3"></line>
-              </svg>
-              Visit Tool
-            </button>
-            <button class="action-btn secondary" (click)="shareTool(tooltipData)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="18" cy="5" r="3"></circle>
-                <circle cx="6" cy="12" r="3"></circle>
-                <circle cx="18" cy="19" r="3"></circle>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-              </svg>
-              Share
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   `,
   styles: [`
- .sunburst-container {
-  position: relative; /* Needed for absolute children */
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 700px;
-  background: var(--chart-bg);
-  border-radius: 20px;
-  overflow: hidden;
-}.btn-primary {
-    background-color: var(--primary-600);
-    color: #fff
-}
-.btn {
-    display: inline-flex
-;
-    align-items: center;
-    justify-content: center;
-    padding: .75rem
- 1.5rem;
-    border: none;
-    border-radius: .5rem;
-    font-size: .875rem;
-    font-weight: 500;
-    text-decoration: none;
-    cursor: pointer;
-    transition: all .2s ease;
-    white-space: nowrap;
-}
-.btn-primary:hover {
-    background-color: var(--primary-700);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-lg)
-}
+    .sunburst-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 700px;
+      background: var(--chart-bg);
+      border-radius: 20px;
+      overflow: hidden;
+    }
 
-.btn-secondary {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border)
-}
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: .75rem 1.5rem;
+      border: none;
+      border-radius: .5rem;
+      font-size: .875rem;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all .2s ease;
+      white-space: nowrap;
+    }
 
-.btn-secondary:hover {
-    background-color: var(--bg-tertiary);
-    transform: translateY(-1px)
-}
+    .btn-secondary {
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
 
-.controls {
-  position: absolute;
-  top: 1rem;
-  
-  right: 1rem;
-  z-index: 100;
-  display: flex;
-  gap: 0.5rem;
-  background-color: var(--bg-primary);
-  padding: 0.5rem;
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
+    .btn-secondary:hover {
+      background-color: var(--bg-tertiary);
+      transform: translateY(-1px);
+    }
 
+    .controls {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      z-index: 100;
+      display: flex;
+      gap: 0.5rem;
+      background-color: var(--bg-primary);
+      padding: 0.5rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
 
     .chart-wrapper {
       position: relative;
@@ -217,41 +161,11 @@ import { SearchResult } from '../../services/api.service';
       font-size: 10px;
     }
 
-    /* Highlighted elements */
-    .sunburst-svg .highlighted {
-      filter: drop-shadow(0 0 8px #f59e0b) brightness(1.2);
-      stroke: #f59e0b !important;
-      stroke-width: 3px !important;
-    }.sunburst-container {
-      background: linear-gradient(135deg, #fdfbfb, #ebedee);
-      border-radius: 20px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
-    }
-
-    :host-context([data-theme="dark"]) .sunburst-container {
-      background: linear-gradient(135deg, #1e293b, #0f172a);
-    }
-    text {
-      pointer-events: none;
-      fill: #1e293b;
-      font-size: 12px;
-      font-weight: bold;
-      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
-    }
-
-    :host-context([data-theme="dark"]) text {
-      fill: #f1f5f9;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-    }
     .sunburst-svg .highlighted {
       stroke: url(#glow-gradient);
       stroke-width: 4px !important;
       filter: drop-shadow(0 0 10px #f59e0b);
     }
-    .tooltip {
-      transition: opacity 0.3s ease, transform 0.3s ease;
-    }
-
 
     .sunburst-svg .parent-highlighted {
       filter: drop-shadow(0 0 6px #3b82f6) brightness(1.1);
@@ -259,33 +173,38 @@ import { SearchResult } from '../../services/api.service';
       stroke-width: 2px !important;
     }
 
-    /* Center Navigation */
-    .center-navigation {
+    /* Enhanced Center Circle */
+    .center-circle {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 10;
-      max-width: 300px;
-      text-align: center;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: var(--center-bg);
+      backdrop-filter: blur(20px);
+      border: 2px solid var(--center-border);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .center-content {
-      background: var(--center-bg);
-      backdrop-filter: blur(20px);
-      border-radius: 16px;
-      padding: 24px;
-      border: 1px solid var(--center-border);
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      padding: 20px;
+      width: 100%;
     }
 
     .breadcrumb {
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 20px;
-      font-size: 14px;
+      margin-bottom: 16px;
+      font-size: 12px;
     }
 
     .breadcrumb-item {
@@ -295,12 +214,12 @@ import { SearchResult } from '../../services/api.service';
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      border-radius: 8px;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 6px;
       transition: all 0.2s ease;
       pointer-events: auto;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 500;
     }
 
@@ -310,12 +229,12 @@ import { SearchResult } from '../../services/api.service';
     }
 
     .breadcrumb-item svg {
-      width: 14px;
-      height: 14px;
+      width: 12px;
+      height: 12px;
     }
 
     .breadcrumb-separator {
-      margin: 0 8px;
+      margin: 0 6px;
       color: var(--breadcrumb-separator);
       font-weight: 300;
     }
@@ -325,27 +244,68 @@ import { SearchResult } from '../../services/api.service';
       font-weight: 600;
     }
 
+    /* Root View Styles */
     .center-info {
       text-align: center;
     }
 
+    .center-logo {
+      margin-bottom: 16px;
+    }
+
+    .logo-ring {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--logo-ring-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      position: relative;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    .logo-ring::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      border-radius: 50%;
+      background: var(--logo-ring-border);
+      z-index: -1;
+      animation: rotate 20s linear infinite;
+    }
+
+    .logo-inner {
+      font-size: 32px;
+      z-index: 1;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
     .center-title {
-      font-size: 24px;
+      font-size: 20px;
       font-weight: 700;
       color: var(--center-title);
-      margin: 0 0 8px 0;
+      margin: 0 0 6px 0;
     }
 
     .center-description {
-      font-size: 14px;
+      font-size: 12px;
       color: var(--center-description);
-      margin: 0 0 20px 0;
+      margin: 0 0 16px 0;
     }
 
     .center-stats {
       display: flex;
       justify-content: center;
-      gap: 24px;
+      gap: 20px;
     }
 
     .stat {
@@ -354,20 +314,21 @@ import { SearchResult } from '../../services/api.service';
 
     .stat-number {
       display: block;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 700;
       color: var(--stat-number);
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
 
     .stat-label {
-      font-size: 12px;
+      font-size: 10px;
       color: var(--stat-label);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       font-weight: 500;
     }
 
+    /* Category View Styles */
     .category-info {
       text-align: center;
     }
@@ -375,21 +336,22 @@ import { SearchResult } from '../../services/api.service';
     .category-header {
       display: flex;
       align-items: center;
-      gap: 16px;
-      margin-bottom: 20px;
+      gap: 12px;
+      margin-bottom: 16px;
       text-align: left;
     }
 
     .category-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
+      font-size: 18px;
       color: white;
       flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
     .category-details {
@@ -398,215 +360,76 @@ import { SearchResult } from '../../services/api.service';
     }
 
     .category-name {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 700;
       color: var(--category-name);
-      margin: 0 0 4px 0;
+      margin: 0 0 2px 0;
     }
 
     .category-description {
-      font-size: 13px;
+      font-size: 11px;
       color: var(--category-description);
       margin: 0;
-      line-height: 1.4;
+      line-height: 1.3;
     }
 
     .category-stats {
       display: flex;
       justify-content: center;
-      gap: 24px;
+      gap: 20px;
     }
 
-    /* Tooltip */
-    .tooltip {
-      position: absolute;
-      background: var(--tooltip-bg);
-      border: 1px solid var(--tooltip-border);
-      border-radius: 12px;
-      padding: 0;
+    /* SVG Text Styles */
+    text {
       pointer-events: none;
-      z-index: 1000;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-      max-width: 300px;
-      min-width: 250px;
-      opacity: 0;
-      transform: translateY(10px) scale(0.95);
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      backdrop-filter: blur(20px);
+      fill: var(--text-color);
+      font-size: 10px;
+      font-weight: bold;
+      text-shadow: 0 1px 2px var(--text-shadow);
     }
 
-    .tooltip.visible {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
+    @media (max-width: 768px) {
+      .center-circle {
+        width: 240px;
+        height: 240px;
+      }
 
-    .tooltip-header {
-      padding: 16px;
-      border-bottom: 1px solid var(--tooltip-divider);
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-    }
+      .center-content {
+        padding: 16px;
+      }
 
-    .tooltip-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      color: white;
-      flex-shrink: 0;
-    }
+      .logo-ring {
+        width: 60px;
+        height: 60px;
+      }
 
-    .tooltip-info {
-      flex: 1;
-      min-width: 0;
-    }
+      .logo-inner {
+        font-size: 24px;
+      }
 
-    .tooltip-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--tooltip-title);
-      margin: 0 0 4px 0;
-    }
+      .center-title {
+        font-size: 16px;
+      }
 
-    .tooltip-type {
-      font-size: 12px;
-      color: var(--tooltip-type);
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
+      .category-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+      }
 
-    .tooltip-rating {
-      text-align: right;
-    }
-
-    .rating-value {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--rating-value);
-      margin-bottom: 4px;
-    }
-
-    .rating-stars {
-      display: flex;
-      gap: 2px;
-      justify-content: flex-end;
-    }
-
-    .star {
-      color: var(--star-empty);
-      font-size: 12px;
-    }
-
-    .star.filled {
-      color: var(--star-filled);
-    }
-
-    .tooltip-body {
-      padding: 16px;
-    }
-
-    .tooltip-description {
-      color: var(--tooltip-description);
-      margin: 0 0 16px 0;
-      line-height: 1.4;
-      font-size: 14px;
-    }
-
-    .tooltip-stats {
-      margin-bottom: 16px;
-    }
-
-    .stat-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .stat-label {
-      font-size: 12px;
-      color: var(--stat-label);
-      font-weight: 500;
-      min-width: 60px;
-    }
-
-    .popularity-bar {
-      flex: 1;
-      height: 4px;
-      background: var(--popularity-bg);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .popularity-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #10b981, #3b82f6);
-      border-radius: 2px;
-      transition: width 0.3s ease;
-    }
-
-    .stat-value {
-      font-size: 12px;
-      color: var(--stat-value);
-      font-weight: 600;
-      min-width: 35px;
-      text-align: right;
-    }
-
-    .tooltip-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .action-btn {
-      flex: 1;
-      padding: 8px 12px;
-      border: none;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      transition: all 0.2s ease;
-      pointer-events: auto;
-    }
-
-    .action-btn svg {
-      width: 12px;
-      height: 12px;
-    }
-
-    .action-btn.primary {
-      background: var(--btn-primary-bg);
-      color: var(--btn-primary-text);
-    }
-
-    .action-btn.primary:hover {
-      background: var(--btn-primary-hover);
-      transform: translateY(-1px);
-    }
-
-    .action-btn.secondary {
-      background: var(--btn-secondary-bg);
-      color: var(--btn-secondary-text);
-      border: 1px solid var(--btn-secondary-border);
-    }
-
-    .action-btn.secondary:hover {
-      background: var(--btn-secondary-hover);
+      .category-stats {
+        gap: 16px;
+      }
     }
 
     /* Light theme */
     :host-context([data-theme="light"]) {
+      --chart-bg: linear-gradient(135deg, #fdfbfb, #ebedee);
+      --bg-primary: rgba(255, 255, 255, 0.9);
+      --bg-secondary: rgba(248, 250, 252, 0.9);
+      --bg-tertiary: #f1f5f9;
+      --text-primary: #1e293b;
       --border: #e2e8f0;
-      --chart-bg: rgba(255, 255, 255, 0.95);
       --center-bg: rgba(255, 255, 255, 0.95);
       --center-border: rgba(226, 232, 240, 0.8);
       --center-title: #1e293b;
@@ -620,30 +443,20 @@ import { SearchResult } from '../../services/api.service';
       --breadcrumb-current: #1e293b;
       --category-name: #1e293b;
       --category-description: #64748b;
-      --tooltip-bg: rgba(255, 255, 255, 0.98);
-      --tooltip-border: rgba(226, 232, 240, 0.8);
-      --tooltip-divider: rgba(226, 232, 240, 0.6);
-      --tooltip-title: #1e293b;
-      --tooltip-type: #64748b;
-      --tooltip-description: #475569;
-      --rating-value: #1e293b;
-      --star-empty: #e2e8f0;
-      --star-filled: #fbbf24;
-      --stat-label: #64748b;
-      --stat-value: #1e293b;
-      --popularity-bg: #e2e8f0;
-      --btn-primary-bg: #3b82f6;
-      --btn-primary-text: white;
-      --btn-primary-hover: #2563eb;
-      --btn-secondary-bg: #f8fafc;
-      --btn-secondary-text: #475569;
-      --btn-secondary-border: #e2e8f0;
-      --btn-secondary-hover: #f1f5f9;
+      --logo-ring-bg: linear-gradient(135deg, #3b82f6, #1e40af);
+      --logo-ring-border: linear-gradient(135deg, #60a5fa, #3b82f6);
+      --text-color: #1e293b;
+      --text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
     }
 
     /* Dark theme */
     :host-context([data-theme="dark"]) {
-      --chart-bg: rgba(15, 23, 42, 0.95);
+      --chart-bg: linear-gradient(135deg, #1e293b, #0f172a);
+      --bg-primary: rgba(30, 41, 59, 0.9);
+      --bg-secondary: rgba(51, 65, 85, 0.9);
+      --bg-tertiary: #64748b;
+      --text-primary: #f1f5f9;
+      --border: #334155;
       --center-bg: rgba(30, 41, 59, 0.95);
       --center-border: rgba(51, 65, 85, 0.8);
       --center-title: #f1f5f9;
@@ -657,60 +470,10 @@ import { SearchResult } from '../../services/api.service';
       --breadcrumb-current: #f1f5f9;
       --category-name: #f1f5f9;
       --category-description: #94a3b8;
-      --tooltip-bg: rgba(30, 41, 59, 0.98);
-      --tooltip-border: rgba(51, 65, 85, 0.8);
-      --tooltip-divider: rgba(51, 65, 85, 0.6);
-      --tooltip-title: #f1f5f9;
-      --tooltip-type: #94a3b8;
-      --tooltip-description: #cbd5e1;
-      --rating-value: #f1f5f9;
-      --border: #e2e8f0;
-      --star-empty: #475569;
-      --star-filled: #fbbf24;
-      --stat-label: #94a3b8;
-      --stat-value: #f1f5f9;
-      --popularity-bg: #334155;
-      --btn-primary-bg: #3b82f6;
-      --btn-primary-text: white;
-      --btn-primary-hover: #60a5fa;
-      --btn-secondary-bg: #475569;
-      --btn-secondary-text: #cbd5e1;
-      --btn-secondary-border: #64748b;
-      --btn-secondary-hover: #64748b;
-    }
-
-    @media (max-width: 768px) {
-      .center-navigation {
-        max-width: 250px;
-      }
-
-      .center-content {
-        padding: 20px;
-      }
-
-      .category-header {
-        flex-direction: column;
-        text-align: center;
-        gap: 12px;
-      }
-
-      .tooltip {
-        max-width: 280px;
-        min-width: 220px;
-      }
-      text {
-  pointer-events: none;
-  text-shadow: 0 0 2px white;
-  font-weight: bold;
-}text {
-  font-size: 10px;
-  fill: #333;
-  background: white;
-  border-radius: 9999px;
-  padding: 2px 6px;
-}
-
-
+      --logo-ring-bg: linear-gradient(135deg, #3b82f6, #60a5fa);
+      --logo-ring-border: linear-gradient(135deg, #60a5fa, #a78bfa);
+      --text-color: #f1f5f9;
+      --text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
     }
   `],
   standalone: true,
@@ -719,6 +482,7 @@ import { SearchResult } from '../../services/api.service';
 export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() data!: SunburstData;
   @Output() categorySelect = new EventEmitter<string>();
+  @Output() toolClick = new EventEmitter<ToolClickData>();
   @ViewChild('svgElement', { static: true }) svgElement!: ElementRef<SVGSVGElement>;
 
   private destroy$ = new Subject<void>();
@@ -733,11 +497,6 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
   public centerInfo: any = null;
   public totalCategories = 0;
   public totalTools = 0;
-
-  public tooltipVisible = false;
-  public tooltipX = 0;
-  public tooltipY = 0;
-  public tooltipData: any = {};
 
   constructor(private themeService: ThemeService) {}
 
@@ -828,10 +587,8 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
       .attr('stroke', '#fff')
       .attr('stroke-width', 1)
       .attr('d', (d: any) => this.arc(d.current))
-      .on('click', (event, d) => this.clicked(event, d))
-      .on('mouseover', (event, d) => this.showTooltip(event, d))
-      .on('mousemove', (event) => this.updateTooltip(event))
-      .on('mouseout', () => this.hideTooltip());
+      .style('cursor', 'pointer')
+      .on('click', (event, d) => this.clicked(event, d));
 
     this.labels = svg.append('g').attr('pointer-events', 'none').attr('class', 'labels');
     this.updateLabels();
@@ -839,8 +596,17 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   private clicked(event: any, p: any) {
+    // Handle tool (leaf node) clicks
     if (p.depth === 2 && p.data.url) {
-      window.open(p.data.url, '_blank');
+      const toolData: ToolClickData = {
+        name: p.data.name,
+        description: p.data.description,
+        url: p.data.url,
+        category: p.parent.data.name,
+        categoryColor: p.data.color,
+        popularity: p.data.value || 0
+      };
+      this.toolClick.emit(toolData);
       return;
     }
 
@@ -881,31 +647,30 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
     const text = this.labels.selectAll('text')
       .data(visibleNodes, (d: any) => d.data.name);
 
-   text.join(
-  (enter: any) => enter.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('alignment-baseline', 'middle')
-    .style('font-size', '10px')
-    .style('fill', '#333')
-    .style('pointer-events', 'none')
-    .text((d: any) => d.data.name)
-    .attr('transform', (d: any) => {
-      const [x, y] = this.arc.centroid(d.current);
-      return `translate(${x}, ${y})`;
-    }),
+    text.join(
+      (enter: any) => enter.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('alignment-baseline', 'middle')
+        .style('font-size', '10px')
+        .style('fill', 'var(--text-color)')
+        .style('pointer-events', 'none')
+        .text((d: any) => d.data.name)
+        .attr('transform', (d: any) => {
+          const [x, y] = this.arc.centroid(d.current);
+          return `translate(${x}, ${y})`;
+        }),
 
-  (update: any) => update
-    .text((d: any) => d.data.name)
-    .transition()
-    .duration(750)
-    .attr('transform', (d: any) => {
-      const [x, y] = this.arc.centroid(d.current);
-      return `translate(${x}, ${y})`;
-    }),
+      (update: any) => update
+        .text((d: any) => d.data.name)
+        .transition()
+        .duration(750)
+        .attr('transform', (d: any) => {
+          const [x, y] = this.arc.centroid(d.current);
+          return `translate(${x}, ${y})`;
+        }),
 
-  (exit: any) => exit.remove()
-);
-
+      (exit: any) => exit.remove()
+    );
   }
 
   public resetZoom() {
@@ -916,35 +681,14 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
     const icons: Record<string, string> = {
       'text-generation': '✍️',
       'image-generation': '🎨',
-      'code-generation': '💻'
+      'code-generation': '💻',
+      'audio-processing': '🎵',
+      'video-generation': '🎬',
+      'data-analysis': '📊',
+      'design-tools': '🎯',
+      'productivity': '⚡'
     };
     return icons[id] || '🔧';
-  }
-
-  private showTooltip(event: MouseEvent, d: any) {
-    if (!d || d.depth === 0) return;
-    this.tooltipData = {
-      title: d.data.name,
-      description: d.data.description || '',
-      type: d.data.type || '',
-      icon: '🔧',
-      color: '#000',
-      rating: d.data.rating || 0,
-      stats: d.data.stats || {},
-      url: d.data.url || ''
-    };
-    this.tooltipX = event.offsetX;
-    this.tooltipY = event.offsetY;
-    this.tooltipVisible = true;
-  }
-
-  private updateTooltip(event: MouseEvent) {
-    this.tooltipX = event.offsetX;
-    this.tooltipY = event.offsetY;
-  }
-
-  private hideTooltip() {
-    this.tooltipVisible = false;
   }
 
   private setCenterInfo() {
@@ -970,22 +714,4 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
     const total = node.children.reduce((sum: number, child: any) => sum + (child.data.value || 0), 0);
     return Math.round(total / node.children.length);
   }
-
-  public getStars(rating: number): boolean[] {
-    return Array(5).fill(false).map((_, i) => i < rating);
-  }
-
-  public openTool(url: string) {
-    if (url) window.open(url, '_blank');
-  }
-
-  public shareTool(toolData: any) {
-    const shareText = `${toolData.title}: ${toolData.url}`;
-    if (navigator.share) {
-      navigator.share({ title: toolData.title, text: toolData.description, url: toolData.url });
-    } else {
-      navigator.clipboard.writeText(shareText);
-    }
-  }
 }
-
