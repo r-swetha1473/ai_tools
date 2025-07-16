@@ -46,8 +46,9 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
             <div
               class="search-result-item"
               [class.selected]="i === selectedIndex"
-              (mousedown)="selectResult(result)"
+              (mousedown)="selectResult(result); $event.preventDefault()"
               (mouseenter)="selectedIndex = i"
+              (mouseleave)="onMouseLeave()"
             >
               <div class="result-icon" [style.background-color]="getResultColor(result)">
                 <span class="result-emoji">{{ getResultIcon(result) }}</span>
@@ -192,12 +193,17 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
       cursor: pointer;
       transition: all 0.2s ease;
       position: relative;
+      user-select: none;
     }
 
     .search-result-item:hover,
     .search-result-item.selected {
       background: var(--results-hover);
       transform: translateX(4px);
+    }
+
+    .search-result-item:active {
+      transform: translateX(2px);
     }
 
     .search-result-item:last-child {
@@ -487,9 +493,10 @@ export class SearchBarComponent implements OnInit, OnDestroy {
   }
 
   onBlur() {
+    // Increase timeout to allow for better mouse interaction
     this.blurTimeout = setTimeout(() => {
       this.hideResults();
-    }, 200);
+    }, 300);
   }
 
   onKeyDown(event: KeyboardEvent) {
@@ -561,6 +568,11 @@ export class SearchBarComponent implements OnInit, OnDestroy {
     if (this.blurTimeout) {
       clearTimeout(this.blurTimeout);
     }
+    
+    // Prevent input from losing focus immediately
+    setTimeout(() => {
+      this.searchInput.nativeElement.blur();
+    }, 100);
   }
 
   highlight(text: string): string {
@@ -604,5 +616,10 @@ export class SearchBarComponent implements OnInit, OnDestroy {
 
   isFirstOfType(index: number, type: string): boolean {
     return index === this.searchResults.findIndex(r => r.type === type);
+  }
+
+  onMouseLeave() {
+    // Optional: Reset selection on mouse leave if desired
+    // this.selectedIndex = -1;
   }
 }

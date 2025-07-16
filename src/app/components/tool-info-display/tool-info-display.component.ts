@@ -8,6 +8,7 @@ export interface ToolInfo {
   category: string;
   categoryColor: string;
   popularity: number;
+  demoVideo?: string;
 }
 
 export interface CategoryInfo {
@@ -40,6 +41,41 @@ export interface CategoryInfo {
           </div>
         </div>
       </div>
+
+      <!-- Demo Video Section -->
+      <div class="demo-video-section" *ngIf="selectedTool">
+        <h4 class="demo-title">See {{ selectedTool.name }} in Action</h4>
+        <div class="video-container">
+          <div class="video-placeholder">
+            <div class="video-play-button" (click)="playDemoVideo()">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
+            <div class="video-overlay">
+              <div class="video-info">
+                <span class="video-duration">2:30</span>
+                <span class="video-quality">HD</span>
+              </div>
+            </div>
+            <div class="video-thumbnail">
+              <div class="thumbnail-gradient" [style.background]="getThumbnailGradient()"></div>
+              <div class="thumbnail-content">
+                <div class="thumbnail-icon" [style.background]="selectedTool.categoryColor">
+                  🛠️
+                </div>
+                <div class="thumbnail-text">
+                  <h5>{{ selectedTool.name }} Demo</h5>
+                  <p>Interactive walkthrough</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="demo-description">
+          Watch how {{ selectedTool.name }} can streamline your workflow and boost productivity.
+        </p>
+      </div>
       
       <div class="tool-actions">
         <button class="action-btn primary" (click)="onVisitTool()" *ngIf="selectedTool.url">
@@ -49,6 +85,13 @@ export interface CategoryInfo {
             <line x1="10" y1="14" x2="21" y2="3"></line>
           </svg>
           Visit {{ getDomain() }}
+        </button>
+        
+        <button class="action-btn secondary" (click)="playDemoVideo()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5,3 19,12 5,21"></polygon>
+          </svg>
+          Watch Demo
         </button>
         
         <button class="action-btn secondary" (click)="onShareTool()">
@@ -206,6 +249,170 @@ export interface CategoryInfo {
       display: flex;
       gap: 16px;
       flex-wrap: wrap;
+      margin-top: 32px;
+    }
+
+    /* Demo Video Section */
+    .demo-video-section {
+      margin: 32px 0;
+      padding: 24px;
+      background: var(--demo-section-bg);
+      border-radius: 16px;
+      border: 1px solid var(--demo-section-border);
+    }
+
+    .demo-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--demo-title);
+      margin: 0 0 20px 0;
+      text-align: center;
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto 16px;
+    }
+
+    .video-placeholder {
+      position: relative;
+      width: 100%;
+      height: 300px;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    }
+
+    .video-placeholder:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .video-thumbnail {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .thumbnail-gradient {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      opacity: 0.1;
+    }
+
+    .thumbnail-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      color: white;
+      text-align: left;
+    }
+
+    .thumbnail-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: white;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .thumbnail-text h5 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 4px 0;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .thumbnail-text p {
+      font-size: 14px;
+      margin: 0;
+      opacity: 0.9;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .video-play-button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 10;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .video-play-button:hover {
+      transform: translate(-50%, -50%) scale(1.1);
+      background: rgba(255, 255, 255, 1);
+    }
+
+    .video-play-button svg {
+      width: 32px;
+      height: 32px;
+      color: #3b82f6;
+      margin-left: 4px;
+    }
+
+    .video-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6));
+      z-index: 1;
+    }
+
+    .video-info {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      display: flex;
+      gap: 8px;
+      z-index: 3;
+    }
+
+    .video-duration,
+    .video-quality {
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .demo-description {
+      text-align: center;
+      color: var(--demo-description);
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 0;
     }
 
     .action-btn {
@@ -429,6 +636,30 @@ export interface CategoryInfo {
       .tool-card-actions {
         flex-direction: column;
       }
+
+      .demo-video-section {
+        padding: 16px;
+      }
+
+      .video-placeholder {
+        height: 200px;
+      }
+
+      .thumbnail-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+      }
+
+      .video-play-button {
+        width: 60px;
+        height: 60px;
+      }
+
+      .video-play-button svg {
+        width: 24px;
+        height: 24px;
+      }
     }
 
     /* Light theme */
@@ -467,6 +698,10 @@ export interface CategoryInfo {
       --tool-card-btn-secondary-bg: transparent;
       --tool-card-btn-secondary-text: #64748b;
       --tool-card-btn-secondary-hover: #f8fafc;
+      --demo-section-bg: rgba(248, 250, 252, 0.8);
+      --demo-section-border: #e2e8f0;
+      --demo-title: #1e293b;
+      --demo-description: #64748b;
     }
 
     /* Dark theme */
@@ -505,6 +740,10 @@ export interface CategoryInfo {
       --tool-card-btn-secondary-bg: transparent;
       --tool-card-btn-secondary-text: #94a3b8;
       --tool-card-btn-secondary-hover: #475569;
+      --demo-section-bg: rgba(51, 65, 85, 0.8);
+      --demo-section-border: #475569;
+      --demo-title: #f1f5f9;
+      --demo-description: #94a3b8;
     }
   `],
   standalone: true,
@@ -569,5 +808,31 @@ export class ToolInfoDisplayComponent {
       'Legal Tech': '⚖️'
     };
     return icons[categoryName] || '🔧';
+  }
+
+  getThumbnailGradient(): string {
+    if (!this.selectedTool) return 'linear-gradient(135deg, #3b82f6, #1e40af)';
+    const color = this.selectedTool.categoryColor;
+    return `linear-gradient(135deg, ${color}, ${this.darkenColor(color, 20)})`;
+  }
+
+  private darkenColor(color: string, percent: number): string {
+    // Simple color darkening - in a real app, you might use a color manipulation library
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    const factor = (100 - percent) / 100;
+    const newR = Math.round(r * factor);
+    const newG = Math.round(g * factor);
+    const newB = Math.round(b * factor);
+    
+    return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+  }
+
+  playDemoVideo() {
+    // For now, show an alert - in a real app, this would open a video modal or navigate to a video
+    alert(`Playing demo video for ${this.selectedTool?.name}!\n\nIn a real implementation, this would:\n• Open a video modal\n• Play an embedded video\n• Navigate to a demo page\n• Show interactive tutorial`);
   }
 }
