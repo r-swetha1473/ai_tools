@@ -862,8 +862,6 @@ export class App implements OnInit {
       }
     }, 100);
   }
-    }
-  }
 
   onCategoryClick(categoryData: CategoryInfo) {
     this.selectedCategory = categoryData;
