@@ -835,14 +835,33 @@ export class App implements OnInit {
   }
 
   onSearchResult(result: SearchResult) {
-    // Clear previous selections
+    console.log('Search result received:', result);
+    
+    // Clear previous selections first
     this.selectedTool = null;
     this.selectedCategory = null;
     
-    if (result.type === 'category' && result.id) {
-      this.sunburstChart?.highlightCategory(result.id);
-    } else if (result.type === 'tool' && result.name) {
-      this.sunburstChart?.highlightTool(result.name);
+    // Wait for chart to be ready
+    setTimeout(() => {
+      if (result.type === 'category' && result.id) {
+        console.log('Highlighting category:', result.id);
+        this.sunburstChart?.highlightCategory(result.id);
+      } else if (result.type === 'tool' && result.name) {
+        console.log('Highlighting tool:', result.name);
+        this.sunburstChart?.highlightTool(result.name);
+        
+        // Also set the selected tool for display
+        this.selectedTool = {
+          name: result.name,
+          description: result.description,
+          url: result.url,
+          category: result.category || 'Unknown',
+          categoryColor: result.categoryColor || '#3b82f6',
+          popularity: 85 // Default value since it's not in search results
+        };
+      }
+    }, 100);
+  }
     }
   }
 

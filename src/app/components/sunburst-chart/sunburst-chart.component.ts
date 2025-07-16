@@ -733,13 +733,130 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   public highlightCategory(categoryId: string) {
-    const category = this.root.descendants().find((d: any) => d.depth === 1 && d.data.id === categoryId);
-    if (category) this.clicked(null, category);
+    console.log('Highlighting category:', categoryId);
+    if (!this.root) {
+      console.warn('Root not available for highlighting');
+      return;
+    }
+    
+    const category = this.root.descendants().find((d: any) => 
+      d.depth === 1 && (d.data.id === categoryId || d.data.name.toLowerCase().includes(categoryId.toLowerCase()))
+    );
+    
+    if (category) {
+      console.log('Found category node:', category.data.name);
+      this.clicked(null, category);
+      
+      // Add visual highlight
+      this.addSearchHighlight(category);
+    } else {
+      console.warn('Category not found:', categoryId);
+      // Try to find by name instead
+      const categoryByName = this.root.descendants().find((d: any) => 
+        d.depth === 1 && d.data.name.toLowerCase() === categoryId.toLowerCase()
+      );
+      if (categoryByName) {
+        console.log('Found category by name:', categoryByName.data.name);
+        this.clicked(null, categoryByName);
+        this.addSearchHighlight(categoryByName);
+      }
+    }
   }
 
   public highlightTool(toolName: string) {
-    const tool = this.root.descendants().find((d: any) => d.depth === 2 && d.data.name.toLowerCase() === toolName.toLowerCase());
-    if (tool) this.clicked(null, tool.parent);
+    console.log('Highlighting tool:', toolName);
+    if (!this.root) {
+      console.warn('Root not available for highlighting');
+      return;
+    }
+    
+    const tool = this.root.descendants().find((d: any) => 
+      d.depth === 2 && d.data.name.toLowerCase() === toolName.toLowerCase()
+    );
+    
+    if (tool) {
+      console.log('Found tool node:', tool.data.name, 'in category:', tool.parent.data.name);
+      
+      // First zoom to the category
+      this.clicked(null, tool.parent);
+      
+      // Then highlight the specific tool
+      setTimeout(() => {
+        this.addSearchHighlight(tool);
+        
+        // Also emit the tool click event for the info display
+        const toolData = {
+          name: tool.data.name,
+          description: tool.data.description,
+          url: tool.data.url,
+          category: tool.parent.data.name,
+          categoryColor: tool.data.color,
+          popularity: tool.data.value || 0
+        };
+        this.toolClick.emit(toolData);
+      }, 800); // Wait for zoom animation to complete
+    } else {
+      console.warn('Tool not found:', toolName);
+    }
+  }
+
+  private addSearchHighlight(node: any) {
+    // Remove existing highlights
+    this.g.selectAll('.search-highlight').remove();
+    
+    // Add highlight to the found node
+    const highlightPath = this.g.append('path')
+      .datum(node)
+      .attr('class', 'search-highlight')
+      .attr('d', (d: any) => this.arc(d.current))
+      .attr('fill', 'none')
+      .attr('stroke', '#f59e0b')
+      .attr('stroke-width', 4)
+      .attr('opacity', 0)
+      .style('pointer-events', 'none');
+    
+    // Animate the highlight
+    highlightPath
+      .transition()
+      .duration(300)
+      .attr('opacity', 1)
+      .transition()
+      .delay(2000)
+      .duration(500)
+      .attr('opacity', 0)
+      .remove();
+    
+    // Add pulsing effect
+    const pulseHighlight = this.g.append('path')
+      .datum(node)
+      .attr('class', 'search-highlight pulse')
+      .attr('d', (d: any) => this.arc(d.current))
+      .attr('fill', 'none')
+      .attr('stroke', '#f59e0b')
+      .attr('stroke-width', 2)
+      .attr('opacity', 0.7)
+      .style('pointer-events', 'none');
+    
+    // Pulse animation
+    function pulse() {
+      pulseHighlight
+        .transition()
+        .duration(1000)
+        .attr('stroke-width', 6)
+        .attr('opacity', 0.3)
+        .transition()
+        .duration(1000)
+        .attr('stroke-width', 2)
+        .attr('opacity', 0.7)
+        .on('end', pulse);
+    }
+    
+    pulse();
+    
+    // Remove pulse after 5 seconds
+    setTimeout(() => {
+      pulseHighlight.remove();
+    }, 5000);
   }
 
   public getAveragePopularity(node: any): number {
