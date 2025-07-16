@@ -41,6 +41,7 @@ export interface SearchResult {
   color?: string;
   icon?: string;
   toolCount?: number;
+  popularity?: number;
 }
 
 export interface SunburstData {

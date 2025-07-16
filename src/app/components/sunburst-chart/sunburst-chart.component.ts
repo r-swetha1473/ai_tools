@@ -395,6 +395,30 @@ export interface CategoryClickData {
       text-shadow: 0 1px 2px var(--text-shadow);
     }
 
+    /* Search highlight animations */
+    .search-highlight {
+      filter: drop-shadow(0 0 8px #f59e0b);
+    }
+
+    .search-highlight.pulse {
+      animation: searchPulse 2s infinite;
+    }
+
+    @keyframes searchPulse {
+      0% {
+        stroke-width: 2px;
+        opacity: 0.7;
+      }
+      50% {
+        stroke-width: 6px;
+        opacity: 0.3;
+      }
+      100% {
+        stroke-width: 2px;
+        opacity: 0.7;
+      }
+    }
+
     @media (max-width: 768px) {
       .center-circle {
         width: 240px;

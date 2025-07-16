@@ -563,16 +563,18 @@ export class SearchBarComponent implements OnInit, OnDestroy {
   selectResult(result: SearchResult) {
     this.searchQuery = result.name;
     this.hideResults();
+    
+    // Emit the search result immediately
     this.searchResult.emit(result);
     
     if (this.blurTimeout) {
       clearTimeout(this.blurTimeout);
     }
     
-    // Prevent input from losing focus immediately
+    // Brief delay before blurring to ensure the event is processed
     setTimeout(() => {
       this.searchInput.nativeElement.blur();
-    }, 100);
+    }, 200);
   }
 
   highlight(text: string): string {
