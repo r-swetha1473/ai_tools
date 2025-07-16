@@ -445,7 +445,7 @@ import { ThemeService } from './app/services/theme.service';
     /* Search Section */
     .search-section {
       position: relative;
-      z-index: 1;
+      z-index: 100;
       padding: 40px 0;
       background: var(--search-section-bg);
       backdrop-filter: blur(20px);
@@ -456,6 +456,8 @@ import { ThemeService } from './app/services/theme.service';
       margin: 0 auto;
       padding: 0 24px;
       text-align: center;
+      position: relative;
+      z-index: 101;
     }
 
     .search-title {
@@ -468,7 +470,7 @@ import { ThemeService } from './app/services/theme.service';
     /* Main Content */
     .app-main {
       position: relative;
-      z-index: 1;
+      z-index: 10;
       max-width: 1400px;
       margin: 0 auto;
       padding: 0 24px;
@@ -481,6 +483,8 @@ import { ThemeService } from './app/services/theme.service';
     /* Visualization Section */
     .visualization-section {
       padding: 40px 0 80px;
+      position: relative;
+      z-index: 20;
     }
 
     .section-header {

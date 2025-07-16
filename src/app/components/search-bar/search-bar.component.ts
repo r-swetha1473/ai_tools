@@ -74,7 +74,7 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
   styles: [`
     .search-container {
       position: relative;
-      z-index: 200;
+      z-index: 102;
       width: 100%;
       max-width: 600px;
       margin: 0 auto;
@@ -154,7 +154,7 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
       border-radius: 16px;
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
       backdrop-filter: blur(20px);
-      z-index: 10000;
+      z-index: 1000;
       animation: slideDown 0.2s ease-out;
     }
 
@@ -164,7 +164,7 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of }
       left: 16px;
       right: 16px;
       max-height: 60vh;
-      z-index: 10001;
+      z-index: 1001;
     }
 
     .results-content {
