@@ -851,15 +851,15 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
       return;
     }
     
-    // First scroll to the chart section
-    this.scrollToChartSection();
-    
     const tool = this.root.descendants().find((d: any) => 
       d.depth === 2 && d.data.name.toLowerCase() === toolName.toLowerCase()
     );
     
     if (tool) {
       console.log('Found tool node:', tool.data.name, 'in category:', tool.parent.data.name);
+      
+      // First scroll to the chart section
+      this.scrollToChartSection();
       
       // First zoom to the category
       this.clicked(null, tool.parent);
@@ -868,11 +868,12 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
       setTimeout(() => {
         this.addSearchHighlight(tool);
         
-        // Zoom into the specific tool after category zoom completes
+        // Focus on the specific tool after category zoom completes
         setTimeout(() => {
-          this.clicked(null, tool);
+          // Don't click the tool, just keep it highlighted in the category view
+          // The tool info will be displayed via the search result emission
           
-          // Also emit the tool click event for the info display
+          // Emit the tool click event for the info display
           const toolData = {
             name: tool.data.name,
             description: tool.data.description,

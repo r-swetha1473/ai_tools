@@ -102,12 +102,24 @@ import { ThemeService } from './app/services/theme.service';
           </div>
 
           <div class="loading-container" *ngIf="!sunburstData">
-            <div class="loading-animation">
-              <div class="loading-circle"></div>
-              <div class="loading-circle"></div>
-              <div class="loading-circle"></div>
+            <div class="loading-content">
+              <div class="loading-animation">
+                <div class="loading-circle"></div>
+                <div class="loading-circle"></div>
+                <div class="loading-circle"></div>
+              </div>
+              <div class="loading-text-container">
+                <p class="loading-text animated-text">Loading AI tools universe</p>
+                <div class="loading-dots">
+                  <span class="dot">.</span>
+                  <span class="dot">.</span>
+                  <span class="dot">.</span>
+                </div>
+              </div>
+              <div class="loading-progress">
+                <div class="progress-bar"></div>
+              </div>
             </div>
-            <p class="loading-text">Loading AI tools universe...</p>
           </div>
         </section>
         <!-- Tool/Category Info Display -->
@@ -550,10 +562,16 @@ import { ThemeService } from './app/services/theme.service';
       padding: 100px 0;
     }
 
+    .loading-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
     .loading-animation {
       display: flex;
       gap: 8px;
-      margin-bottom: 24px;
     }
 
     .loading-circle {
@@ -576,6 +594,92 @@ import { ThemeService } from './app/services/theme.service';
       }
     }
 
+    .loading-text-container {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .loading-text {
+      color: var(--loading-text);
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .animated-text {
+      animation: textPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes textPulse {
+      0%, 100% {
+        opacity: 0.7;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.02);
+      }
+    }
+
+    .loading-dots {
+      display: flex;
+      gap: 2px;
+    }
+
+    .dot {
+      color: var(--loading-color);
+      font-size: 18px;
+      font-weight: bold;
+      animation: dotBounce 1.5s infinite ease-in-out;
+    }
+
+    .dot:nth-child(1) { animation-delay: 0s; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes dotBounce {
+      0%, 60%, 100% {
+        opacity: 0.3;
+        transform: translateY(0);
+      }
+      30% {
+        opacity: 1;
+        transform: translateY(-8px);
+      }
+    }
+
+    .loading-progress {
+      width: 200px;
+      height: 3px;
+      background: var(--progress-bg);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--loading-color);
+      border-radius: 2px;
+      animation: progressSlide 2s ease-in-out infinite;
+    }
+
+    @keyframes progressSlide {
+      0% {
+        width: 0%;
+        transform: translateX(-100%);
+      }
+      50% {
+        width: 70%;
+        transform: translateX(0%);
+      }
+      100% {
+        width: 100%;
+        transform: translateX(100%);
+      }
+    }
+
     @keyframes slideUp {
       from {
         opacity: 0;
@@ -587,11 +691,6 @@ import { ThemeService } from './app/services/theme.service';
       }
     }
 
-    .loading-text {
-      color: var(--loading-text);
-      font-size: 16px;
-      font-weight: 500;
-    }
 
     /* Features Showcase */
     .features-showcase {
@@ -775,6 +874,7 @@ import { ThemeService } from './app/services/theme.service';
       --chart-border: rgba(226, 232, 240, 0.6);
       --loading-color: #3b82f6;
       --loading-text: #64748b;
+      --progress-bg: rgba(59, 130, 246, 0.1);
       --feature-bg: rgba(255, 255, 255, 0.8);
       --feature-border: rgba(226, 232, 240, 0.6);
       --feature-title: #1e293b;
@@ -814,6 +914,7 @@ import { ThemeService } from './app/services/theme.service';
       --chart-border: rgba(51, 65, 85, 0.6);
       --loading-color: #60a5fa;
       --loading-text: #94a3b8;
+      --progress-bg: rgba(96, 165, 250, 0.1);
       --feature-bg: rgba(30, 41, 59, 0.8);
       --feature-border: rgba(51, 65, 85, 0.6);
       --feature-title: #f1f5f9;
