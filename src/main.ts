@@ -474,6 +474,7 @@ import { ThemeService } from './app/services/theme.service';
       max-width: 1400px;
       margin: 0 auto;
       padding: 0 24px;
+      scroll-margin-top: 100px;
     }
 
     .tabs-wrapper {

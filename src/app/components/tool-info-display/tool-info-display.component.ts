@@ -259,6 +259,7 @@ export interface CategoryInfo {
       background: var(--demo-section-bg);
       border-radius: 16px;
       border: 1px solid var(--demo-section-border);
+      scroll-margin-top: 100px;
     }
 
     .demo-title {
