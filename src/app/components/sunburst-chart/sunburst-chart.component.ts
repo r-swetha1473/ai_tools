@@ -638,6 +638,11 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
         popularity: p.data.value || 0
       };
       this.toolClick.emit(toolData);
+      
+      // Scroll to video section after a short delay to allow tool display to render
+      setTimeout(() => {
+        this.scrollToVideoSection();
+      }, 300);
       return;
     }
 
@@ -720,6 +725,37 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
 
       (exit: any) => exit.remove()
     );
+  }
+
+  private scrollToVideoSection() {
+    // Wait a bit more to ensure the tool display component has rendered
+    setTimeout(() => {
+      const videoSection = document.querySelector('.demo-video-section');
+      if (videoSection) {
+        videoSection.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        
+        // Add highlight effect to the video container
+        const videoContainer = videoSection.querySelector('.video-container');
+        if (videoContainer) {
+          videoContainer.classList.add('highlight-pulse');
+          setTimeout(() => {
+            videoContainer.classList.remove('highlight-pulse');
+          }, 3000);
+        }
+      } else {
+        // If video section doesn't exist yet, scroll to tool display
+        const toolDisplay = document.querySelector('.tool-display');
+        if (toolDisplay) {
+          toolDisplay.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }
+    }, 200);
   }
 
   public resetZoom() {

@@ -876,6 +876,21 @@ export class App implements OnInit {
   onToolClick(toolData: any) {
     this.selectedTool = toolData;
     this.selectedCategory = null;
+    
+    // Add a slight delay to ensure the tool display renders before any scrolling
+    setTimeout(() => {
+      this.highlightToolDisplay();
+    }, 100);
+  }
+
+  private highlightToolDisplay() {
+    const toolDisplay = document.querySelector('.tool-display');
+    if (toolDisplay) {
+      toolDisplay.classList.add('highlight');
+      setTimeout(() => {
+        toolDisplay.classList.remove('highlight');
+      }, 2000);
+    }
   }
 
   onToolSelect(toolData: ToolInfo) {

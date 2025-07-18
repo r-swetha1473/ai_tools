@@ -260,6 +260,13 @@ export interface CategoryInfo {
       border-radius: 16px;
       border: 1px solid var(--demo-section-border);
       scroll-margin-top: 100px;
+      transition: all 0.3s ease;
+    }
+
+    .demo-video-section.highlight {
+      transform: scale(1.02);
+      box-shadow: 0 12px 40px rgba(59, 130, 246, 0.2);
+      border-color: #3b82f6;
     }
 
     .demo-title {
@@ -275,6 +282,27 @@ export interface CategoryInfo {
       width: 100%;
       max-width: 600px;
       margin: 0 auto 16px;
+      transition: all 0.3s ease;
+    }
+
+    .video-container.highlight-pulse {
+      animation: videoPulse 2s ease-in-out;
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
+    }
+
+    @keyframes videoPulse {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      }
+      50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 40px rgba(59, 130, 246, 0.6);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      }
     }
 
     .video-placeholder {
