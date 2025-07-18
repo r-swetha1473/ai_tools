@@ -832,7 +832,27 @@ export class ToolInfoDisplayComponent {
   }
 
   playDemoVideo() {
-    // For now, show an alert - in a real app, this would open a video modal or navigate to a video
-    alert(`Playing demo video for ${this.selectedTool?.name}!\n\nIn a real implementation, this would:\n• Open a video modal\n• Play an embedded video\n• Navigate to a demo page\n• Show interactive tutorial`);
+    // Scroll to the demo video section smoothly
+    const demoSection = document.querySelector('.demo-video-section');
+    if (demoSection) {
+      demoSection.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+      
+      // Add a highlight effect to the video container
+      const videoContainer = demoSection.querySelector('.video-container');
+      if (videoContainer) {
+        videoContainer.classList.add('highlight-pulse');
+        setTimeout(() => {
+          videoContainer.classList.remove('highlight-pulse');
+        }, 2000);
+      }
+    }
+    
+    // For now, show an alert after scrolling - in a real app, this would open a video modal
+    setTimeout(() => {
+      alert(`Playing demo video for ${this.selectedTool?.name}!\n\nIn a real implementation, this would:\n• Open a video modal\n• Play an embedded video\n• Navigate to a demo page\n• Show interactive tutorial`);
+    }, 500);
   }
 }

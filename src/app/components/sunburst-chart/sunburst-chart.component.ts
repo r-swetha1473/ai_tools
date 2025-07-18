@@ -808,16 +808,21 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
       setTimeout(() => {
         this.addSearchHighlight(tool);
         
-        // Also emit the tool click event for the info display
-        const toolData = {
-          name: tool.data.name,
-          description: tool.data.description,
-          url: tool.data.url,
-          category: tool.parent.data.name,
-          categoryColor: tool.data.color,
-          popularity: tool.data.value || 0
-        };
-        this.toolClick.emit(toolData);
+        // Zoom into the specific tool after category zoom completes
+        setTimeout(() => {
+          this.clicked(null, tool);
+          
+          // Also emit the tool click event for the info display
+          const toolData = {
+            name: tool.data.name,
+            description: tool.data.description,
+            url: tool.data.url,
+            category: tool.parent.data.name,
+            categoryColor: tool.data.color,
+            popularity: tool.data.value || 0
+          };
+          this.toolClick.emit(toolData);
+        }, 800); // Wait for category zoom to complete
       }, 800); // Wait for zoom animation to complete
     } else {
       console.warn('Tool not found:', toolName);
