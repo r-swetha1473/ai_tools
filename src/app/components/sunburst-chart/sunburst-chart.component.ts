@@ -419,6 +419,27 @@ export interface CategoryClickData {
       }
     }
 
+    /* Chart container highlight for search */
+    :host-context(.search-highlight-container) .chart-container,
+    .chart-container.search-highlight-container {
+      animation: chartHighlight 3s ease-in-out;
+      box-shadow: 0 0 40px rgba(59, 130, 246, 0.3) !important;
+    }
+
+    @keyframes chartHighlight {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+      }
+      50% {
+        transform: scale(1.02);
+        box-shadow: 0 0 50px rgba(59, 130, 246, 0.4);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+      }
+    }
     @media (max-width: 768px) {
       .center-circle {
         width: 240px;
@@ -830,6 +851,9 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
       return;
     }
     
+    // First scroll to the chart section
+    this.scrollToChartSection();
+    
     const tool = this.root.descendants().find((d: any) => 
       d.depth === 2 && d.data.name.toLowerCase() === toolName.toLowerCase()
     );
@@ -916,12 +940,35 @@ export class SunburstChartComponent implements OnInit, AfterViewInit, OnDestroy 
         .on('end', pulse);
     }
     
+    // First scroll to the chart section
+    this.scrollToChartSection();
+    
     pulse();
     
     // Remove pulse after 5 seconds
     setTimeout(() => {
       pulseHighlight.remove();
     }, 5000);
+  }
+
+  private scrollToChartSection() {
+    // Find the chart container and scroll to it smoothly
+    const chartSection = document.querySelector('.visualization-section');
+    if (chartSection) {
+      chartSection.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+      
+      // Add highlight effect to the chart container
+      const chartContainer = chartSection.querySelector('.chart-container');
+      if (chartContainer) {
+        chartContainer.classList.add('search-highlight-container');
+        setTimeout(() => {
+          chartContainer.classList.remove('search-highlight-container');
+        }, 3000);
+      }
+    }
   }
 
   public getAveragePopularity(node: any): number {

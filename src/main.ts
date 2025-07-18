@@ -486,6 +486,7 @@ import { ThemeService } from './app/services/theme.service';
       padding: 40px 0 80px;
       position: relative;
       z-index: 20;
+      scroll-margin-top: 100px;
     }
 
     .section-header {
@@ -518,6 +519,7 @@ import { ThemeService } from './app/services/theme.service';
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
       backdrop-filter: blur(20px);
       min-height: 800px;
+      transition: all 0.3s ease;
     }
 
     /* Tool/Category Display Styles */
@@ -895,7 +897,7 @@ export class App implements OnInit {
           popularity: 85 // Default value since it's not in search results
         };
       }
-    }, 100);
+    }, 200);
   }
 
   onCategoryClick(categoryData: CategoryInfo) {
