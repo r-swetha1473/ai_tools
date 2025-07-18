@@ -520,6 +520,25 @@ import { ThemeService } from './app/services/theme.service';
       min-height: 800px;
     }
 
+    /* Tool/Category Display Styles */
+    .tool-display, .category-display {
+      background: var(--display-bg);
+      border-radius: 16px;
+      padding: 32px;
+      border: 1px solid var(--display-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      margin-top: 32px;
+      animation: slideUp 0.3s ease-out;
+      transition: all 0.3s ease;
+      scroll-margin-top: 100px;
+    }
+
+    .tool-display.highlight {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
     /* Loading Animation */
     .loading-container {
       display: flex;
@@ -552,6 +571,17 @@ import { ThemeService } from './app/services/theme.service';
       }
       40% {
         transform: scale(1);
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
       }
     }
 
