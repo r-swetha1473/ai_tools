@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface ToolInfo {
@@ -45,9 +45,11 @@ export interface CategoryInfo {
       <!-- Demo Video Section -->
       <div class="demo-video-section" *ngIf="selectedTool">
         <h4 class="demo-title">See {{ selectedTool.name }} in Action</h4>
-        <div class="video-container">
-          <div class="video-placeholder" *ngIf="!isVideoPlaying">
-            <div class="video-play-button" (click)="playDemoVideo()" [attr.aria-label]="'Play demo video for ' + selectedTool.name">
+        <div class="video-container" [class.highlight-pulse]="videoHighlight">
+          
+          <!-- Video Thumbnail/Placeholder -->
+          <div class="video-placeholder" *ngIf="!isVideoPlaying" (click)="playDemoVideo()">
+            <div class="video-play-button" [attr.aria-label]="'Play demo video for ' + selectedTool.name">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M8 5v14l11-7z"/>
               </svg>
@@ -62,7 +64,7 @@ export interface CategoryInfo {
               <div class="thumbnail-gradient" [style.background]="getThumbnailGradient()"></div>
               <div class="thumbnail-content">
                 <div class="thumbnail-icon" [style.background]="selectedTool.categoryColor">
-                  🛠️
+                  {{ getToolIcon(selectedTool.name) }}
                 </div>
                 <div class="thumbnail-text">
                   <h5>{{ selectedTool.name }} Demo</h5>
@@ -72,7 +74,7 @@ export interface CategoryInfo {
             </div>
           </div>
           
-          <!-- Actual Video Player -->
+          <!-- Real Video Player -->
           <div class="video-player" *ngIf="isVideoPlaying">
             <video 
               #videoPlayer
@@ -80,9 +82,12 @@ export interface CategoryInfo {
               controls
               autoplay
               preload="metadata"
-              (loadedmetadata)="onVideoLoaded()"
+              (loadedmetadata)="onVideoLoaded($event)"
+              (timeupdate)="onTimeUpdate($event)"
               (ended)="onVideoEnded()"
               (error)="onVideoError($event)"
+              (play)="onPlay()"
+              (pause)="onPause()"
               class="demo-video"
               [attr.aria-label]="'Demo video for ' + selectedTool.name"
             >
@@ -90,13 +95,17 @@ export interface CategoryInfo {
               <p>Your browser doesn't support HTML5 video. Here's a <a [href]="currentVideoUrl">link to the video</a> instead.</p>
             </video>
             
-            <!-- Video Controls Overlay -->
-            <div class="video-controls-overlay" *ngIf="showCustomControls">
-              <div class="video-progress">
-                <div class="progress-bar" [style.width.%]="videoProgress"></div>
+            <!-- Custom Video Controls Overlay -->
+            <div class="video-controls-overlay" [class.visible]="showControls">
+              <div class="video-progress-container" (click)="seekVideo($event)">
+                <div class="video-progress">
+                  <div class="progress-bar" [style.width.%]="videoProgress"></div>
+                  <div class="progress-handle" [style.left.%]="videoProgress"></div>
+                </div>
               </div>
+              
               <div class="video-controls">
-                <button class="control-btn" (click)="togglePlayPause()" [attr.aria-label]="isPlaying ? 'Pause video' : 'Play video'">
+                <button class="control-btn play-pause" (click)="togglePlayPause()" [attr.aria-label]="isPlaying ? 'Pause video' : 'Play video'">
                   <svg *ngIf="!isPlaying" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M8 5v14l11-7z"/>
                   </svg>
@@ -104,12 +113,50 @@ export interface CategoryInfo {
                     <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
                   </svg>
                 </button>
+                
+                <div class="volume-control">
+                  <button class="control-btn volume-btn" (click)="toggleMute()" [attr.aria-label]="isMuted ? 'Unmute' : 'Mute'">
+                    <svg *ngIf="!isMuted && volume > 0.5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                    <svg *ngIf="!isMuted && volume <= 0.5 && volume > 0" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/>
+                    </svg>
+                    <svg *ngIf="isMuted || volume === 0" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                    </svg>
+                  </button>
+                  <input 
+                    type="range" 
+                    class="volume-slider" 
+                    min="0" 
+                    max="1" 
+                    step="0.1" 
+                    [value]="volume"
+                    (input)="setVolume($event)"
+                    [attr.aria-label]="'Volume: ' + Math.round(volume * 100) + '%'"
+                  />
+                </div>
+                
                 <span class="video-time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
+                
+                <div class="playback-speed">
+                  <select class="speed-selector" (change)="setPlaybackSpeed($event)" [value]="playbackSpeed">
+                    <option value="0.5">0.5x</option>
+                    <option value="0.75">0.75x</option>
+                    <option value="1">1x</option>
+                    <option value="1.25">1.25x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2">2x</option>
+                  </select>
+                </div>
+                
                 <button class="control-btn" (click)="toggleFullscreen()" aria-label="Toggle fullscreen">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                   </svg>
                 </button>
+                
                 <button class="control-btn close-btn" (click)="closeVideo()" aria-label="Close video">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -118,11 +165,19 @@ export interface CategoryInfo {
                 </button>
               </div>
             </div>
+            
+            <!-- Loading Indicator -->
+            <div class="video-loading" *ngIf="isVideoLoading">
+              <div class="loading-spinner"></div>
+              <span>Loading video...</span>
+            </div>
           </div>
         </div>
+        
         <p class="demo-description">
           Watch how {{ selectedTool.name }} can streamline your workflow and boost productivity.
-          <span *ngIf="isVideoPlaying" class="video-status"> • Now playing</span>
+          <span *ngIf="isVideoPlaying && isPlaying" class="video-status"> • Now playing</span>
+          <span *ngIf="isVideoPlaying && !isPlaying" class="video-status paused"> • Paused</span>
         </p>
       </div>
       
@@ -136,11 +191,11 @@ export interface CategoryInfo {
           Visit {{ getDomain() }}
         </button>
         
-        <button class="action-btn secondary" (click)="playDemoVideo()">
+        <button class="action-btn secondary" (click)="playDemoVideo()" [disabled]="isVideoPlaying">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="5,3 19,12 5,21"></polygon>
           </svg>
-          Watch Demo
+          {{ isVideoPlaying ? 'Playing...' : 'Watch Demo' }}
         </button>
         
         <button class="action-btn secondary" (click)="onShareTool()">
@@ -173,7 +228,7 @@ export interface CategoryInfo {
         <div class="tool-card" *ngFor="let tool of selectedCategory.tools" (click)="onToolSelect(tool)">
           <div class="tool-card-header">
             <div class="tool-card-icon" [style.background]="tool.categoryColor">
-              🛠️
+              {{ getToolIcon(tool.name) }}
             </div>
             <div class="tool-card-info">
               <h4 class="tool-card-name">{{ tool.name }}</h4>
@@ -189,9 +244,8 @@ export interface CategoryInfo {
               Visit Tool
             </button>
             <button class="tool-card-btn secondary" (click)="shareTool.emit(tool); $event.stopPropagation()">
-  Share
-</button>
-
+              Share
+            </button>
           </div>
         </div>
       </div>
@@ -294,13 +348,6 @@ export interface CategoryInfo {
       font-weight: 600;
     }
 
-    .tool-actions {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-top: 32px;
-    }
-
     /* Demo Video Section */
     .demo-video-section {
       margin: 32px 0;
@@ -310,12 +357,6 @@ export interface CategoryInfo {
       border: 1px solid var(--demo-section-border);
       scroll-margin-top: 100px;
       transition: all 0.3s ease;
-    }
-
-    .demo-video-section.highlight {
-      transform: scale(1.02);
-      box-shadow: 0 12px 40px rgba(59, 130, 246, 0.2);
-      border-color: #3b82f6;
     }
 
     .demo-title {
@@ -329,9 +370,11 @@ export interface CategoryInfo {
     .video-container {
       position: relative;
       width: 100%;
-      max-width: 600px;
+      max-width: 700px;
       margin: 0 auto 16px;
       transition: all 0.3s ease;
+      border-radius: 12px;
+      overflow: hidden;
     }
 
     .video-container.highlight-pulse {
@@ -345,7 +388,7 @@ export interface CategoryInfo {
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
       }
       50% {
-        transform: scale(1.05);
+        transform: scale(1.02);
         box-shadow: 0 0 40px rgba(59, 130, 246, 0.6);
       }
       100% {
@@ -354,121 +397,11 @@ export interface CategoryInfo {
       }
     }
 
-    /* Video Player Styles */
-    .video-player {
-      position: relative;
-      width: 100%;
-      border-radius: 12px;
-      overflow: hidden;
-      background: #000;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    }
-
-    .demo-video {
-      width: 100%;
-      height: auto;
-      max-height: 400px;
-      display: block;
-      border-radius: 12px;
-    }
-
-    .video-controls-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-      padding: 20px;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-
-    .video-player:hover .video-controls-overlay {
-      opacity: 1;
-    }
-
-    .video-progress {
-      width: 100%;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 2px;
-      margin-bottom: 12px;
-      overflow: hidden;
-    }
-
-    .progress-bar {
-      height: 100%;
-      background: #3b82f6;
-      border-radius: 2px;
-      transition: width 0.3s ease;
-    }
-
-    .video-controls {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      color: white;
-    }
-
-    .control-btn {
-      background: none;
-      border: none;
-      color: white;
-      cursor: pointer;
-      padding: 8px;
-      border-radius: 6px;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .control-btn:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: scale(1.1);
-    }
-
-    .control-btn svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    .close-btn {
-      margin-left: auto;
-      background: rgba(239, 68, 68, 0.8);
-    }
-
-    .close-btn:hover {
-      background: rgba(239, 68, 68, 1);
-    }
-
-    .video-time {
-      font-size: 14px;
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.9);
-      margin-left: auto;
-      margin-right: 16px;
-    }
-
-    .video-status {
-      color: var(--video-status-color);
-      font-weight: 600;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% {
-        opacity: 1;
-      }
-      50% {
-        opacity: 0.6;
-      }
-    }
-
+    /* Video Placeholder */
     .video-placeholder {
       position: relative;
       width: 100%;
-      height: 300px;
+      height: 350px;
       border-radius: 12px;
       overflow: hidden;
       cursor: pointer;
@@ -498,7 +431,7 @@ export interface CategoryInfo {
       left: 0;
       right: 0;
       bottom: 0;
-      opacity: 0.1;
+      opacity: 0.9;
     }
 
     .thumbnail-content {
@@ -596,12 +529,236 @@ export interface CategoryInfo {
       font-weight: 500;
     }
 
+    /* Real Video Player */
+    .video-player {
+      position: relative;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .demo-video {
+      width: 100%;
+      height: auto;
+      max-height: 450px;
+      display: block;
+      border-radius: 12px;
+    }
+
+    /* Custom Video Controls */
+    .video-controls-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 10;
+    }
+
+    .video-player:hover .video-controls-overlay,
+    .video-controls-overlay.visible {
+      opacity: 1;
+    }
+
+    .video-progress-container {
+      width: 100%;
+      margin-bottom: 12px;
+      cursor: pointer;
+    }
+
+    .video-progress {
+      position: relative;
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: #3b82f6;
+      border-radius: 3px;
+      transition: width 0.1s ease;
+    }
+
+    .progress-handle {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 12px;
+      height: 12px;
+      background: #3b82f6;
+      border-radius: 50%;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .video-progress-container:hover .progress-handle {
+      opacity: 1;
+    }
+
+    .video-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: white;
+    }
+
+    .control-btn {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .control-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.1);
+    }
+
+    .control-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .control-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .play-pause svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .volume-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .volume-slider {
+      width: 60px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .volume-slider::-webkit-slider-thumb {
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      background: #3b82f6;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .video-time {
+      font-size: 14px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.9);
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    .playback-speed {
+      margin-left: 8px;
+    }
+
+    .speed-selector {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .close-btn {
+      margin-left: 8px;
+      background: rgba(239, 68, 68, 0.8);
+    }
+
+    .close-btn:hover {
+      background: rgba(239, 68, 68, 1);
+    }
+
+    /* Video Loading */
+    .video-loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: white;
+      z-index: 5;
+    }
+
+    .loading-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
     .demo-description {
       text-align: center;
       color: var(--demo-description);
       font-size: 14px;
       line-height: 1.5;
       margin: 0;
+    }
+
+    .video-status {
+      color: var(--video-status-color);
+      font-weight: 600;
+      animation: pulse 2s infinite;
+    }
+
+    .video-status.paused {
+      color: var(--video-status-paused);
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.6;
+      }
+    }
+
+    .tool-actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 32px;
     }
 
     .action-btn {
@@ -618,6 +775,12 @@ export interface CategoryInfo {
       text-decoration: none;
     }
 
+    .action-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
     .action-btn svg {
       width: 18px;
       height: 18px;
@@ -628,7 +791,7 @@ export interface CategoryInfo {
       color: var(--btn-primary-text);
     }
 
-    .action-btn.primary:hover {
+    .action-btn.primary:hover:not(:disabled) {
       background: var(--btn-primary-hover);
       transform: translateY(-2px);
       box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
@@ -640,7 +803,7 @@ export interface CategoryInfo {
       border: 1px solid var(--btn-secondary-border);
     }
 
-    .action-btn.secondary:hover {
+    .action-btn.secondary:hover:not(:disabled) {
       background: var(--btn-secondary-hover);
       transform: translateY(-2px);
     }
@@ -831,7 +994,7 @@ export interface CategoryInfo {
       }
 
       .video-placeholder {
-        height: 200px;
+        height: 250px;
       }
 
       .thumbnail-content {
@@ -848,6 +1011,22 @@ export interface CategoryInfo {
       .video-play-button svg {
         width: 24px;
         height: 24px;
+      }
+
+      .video-controls {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .volume-control {
+        order: 1;
+        width: 100%;
+        justify-content: center;
+      }
+
+      .video-time {
+        margin-left: 0;
+        order: 2;
       }
     }
 
@@ -892,6 +1071,7 @@ export interface CategoryInfo {
       --demo-title: #1e293b;
       --demo-description: #64748b;
       --video-status-color: #10b981;
+      --video-status-paused: #f59e0b;
     }
 
     /* Dark theme */
@@ -935,79 +1115,95 @@ export interface CategoryInfo {
       --demo-title: #f1f5f9;
       --demo-description: #94a3b8;
       --video-status-color: #34d399;
+      --video-status-paused: #fbbf24;
     }
   `],
   standalone: true,
   imports: [CommonModule]
 })
-export class ToolInfoDisplayComponent {
+export class ToolInfoDisplayComponent implements OnInit {
   @Input() selectedTool: ToolInfo | null = null;
   @Input() selectedCategory: CategoryInfo | null = null;
   @Output() visitTool = new EventEmitter<string>();
   @Output() shareTool = new EventEmitter<ToolInfo>();
   @Output() toolSelect = new EventEmitter<ToolInfo>();
+  @ViewChild('videoPlayer') videoPlayer!: ElementRef<HTMLVideoElement>;
   
-  // Video player properties
+  // Video player state
   isVideoPlaying = false;
+  isVideoLoading = false;
   currentVideoUrl = '';
-  showCustomControls = false;
+  showControls = false;
   isPlaying = false;
   currentTime = 0;
   duration = 0;
   videoProgress = 0;
+  volume = 1;
+  isMuted = false;
+  playbackSpeed = 1;
+  videoHighlight = false;
   
-  // Sample AI tool demo videos (using publicly available demo videos)
+  // Real AI tool demo videos database
   private videoDatabase: { [key: string]: { url: string; duration: string } } = {
     'ChatGPT': {
-      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-      duration: '1:30'
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      duration: '9:56'
     },
     'DALL·E': {
-      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4',
-      duration: '2:15'
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      duration: '10:53'
     },
     'GitHub Copilot': {
-      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_5mb.mp4',
-      duration: '3:45'
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      duration: '0:15'
     },
     'Midjourney': {
-      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-      duration: '2:30'
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+      duration: '0:15'
     },
     'Claude': {
-      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4',
-      duration: '2:00'
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+      duration: '0:60'
     },
     'Stable Diffusion': {
-      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_5mb.mp4',
-      duration: '4:20'
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+      duration: '0:15'
     },
     'ElevenLabs': {
-      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-      duration: '1:45'
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+      duration: '0:15'
     },
     'Runway ML': {
-      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4',
-      duration: '3:10'
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+      duration: '14:48'
+    },
+    'Gemini': {
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
+      duration: '0:15'
+    },
+    'Jasper': {
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+      duration: '12:14'
     },
     'default': {
-      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-      duration: '2:30'
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      duration: '9:56'
     }
   };
 
   ngOnInit() {
-    // Set up video progress tracking
-    setInterval(() => {
-      if (this.isVideoPlaying && this.isPlaying) {
-        const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-        if (videoElement) {
-          this.currentTime = videoElement.currentTime;
-          this.duration = videoElement.duration;
-          this.videoProgress = (this.currentTime / this.duration) * 100;
-        }
+    // Auto-hide controls after 3 seconds of inactivity
+    let controlsTimeout: any;
+    
+    document.addEventListener('mousemove', () => {
+      if (this.isVideoPlaying) {
+        this.showControls = true;
+        clearTimeout(controlsTimeout);
+        controlsTimeout = setTimeout(() => {
+          this.showControls = false;
+        }, 3000);
       }
-    }, 1000);
+    });
   }
 
   getVideoDuration(): string {
@@ -1017,7 +1213,7 @@ export class ToolInfoDisplayComponent {
   }
 
   playDemoVideo() {
-    if (!this.selectedTool) return;
+    if (!this.selectedTool || this.isVideoPlaying) return;
     
     // Get video URL for the selected tool
     const videoData = this.videoDatabase[this.selectedTool.name] || this.videoDatabase['default'];
@@ -1025,7 +1221,14 @@ export class ToolInfoDisplayComponent {
     
     // Show video player
     this.isVideoPlaying = true;
-    this.isPlaying = true;
+    this.isVideoLoading = true;
+    this.showControls = true;
+    
+    // Add highlight effect
+    this.videoHighlight = true;
+    setTimeout(() => {
+      this.videoHighlight = false;
+    }, 2000);
     
     // Scroll to video section
     setTimeout(() => {
@@ -1039,51 +1242,117 @@ export class ToolInfoDisplayComponent {
     }, 100);
   }
 
-  onVideoLoaded() {
-    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-    if (videoElement) {
-      this.duration = videoElement.duration;
-      this.showCustomControls = true;
-    }
+  onVideoLoaded(event: Event) {
+    const video = event.target as HTMLVideoElement;
+    this.duration = video.duration;
+    this.isVideoLoading = false;
+    this.isPlaying = true;
+    
+    // Set initial volume
+    video.volume = this.volume;
+    video.playbackRate = this.playbackSpeed;
+  }
+
+  onTimeUpdate(event: Event) {
+    const video = event.target as HTMLVideoElement;
+    this.currentTime = video.currentTime;
+    this.videoProgress = (this.currentTime / this.duration) * 100;
+  }
+
+  onPlay() {
+    this.isPlaying = true;
+  }
+
+  onPause() {
+    this.isPlaying = false;
   }
 
   onVideoEnded() {
     this.isPlaying = false;
     this.videoProgress = 100;
+    this.showControls = true;
     
-    // Auto-close video after 3 seconds
+    // Auto-close video after 5 seconds
     setTimeout(() => {
-      this.closeVideo();
-    }, 3000);
+      if (!this.isPlaying) {
+        this.closeVideo();
+      }
+    }, 5000);
   }
 
   onVideoError(event: any) {
     console.error('Video loading error:', event);
-    // Fallback to a different video or show error message
-    this.currentVideoUrl = this.videoDatabase['default'].url;
-  }
-
-  togglePlayPause() {
-    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-    if (videoElement) {
-      if (this.isPlaying) {
-        videoElement.pause();
-        this.isPlaying = false;
-      } else {
-        videoElement.play();
-        this.isPlaying = true;
-      }
+    this.isVideoLoading = false;
+    
+    // Try fallback video
+    if (this.currentVideoUrl !== this.videoDatabase['default'].url) {
+      this.currentVideoUrl = this.videoDatabase['default'].url;
     }
   }
 
+  togglePlayPause() {
+    if (!this.videoPlayer) return;
+    
+    const video = this.videoPlayer.nativeElement;
+    if (this.isPlaying) {
+      video.pause();
+    } else {
+      video.play();
+    }
+  }
+
+  seekVideo(event: MouseEvent) {
+    if (!this.videoPlayer || !this.duration) return;
+    
+    const progressContainer = event.currentTarget as HTMLElement;
+    const rect = progressContainer.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const percentage = clickX / rect.width;
+    const newTime = percentage * this.duration;
+    
+    this.videoPlayer.nativeElement.currentTime = newTime;
+  }
+
+  toggleMute() {
+    if (!this.videoPlayer) return;
+    
+    const video = this.videoPlayer.nativeElement;
+    this.isMuted = !this.isMuted;
+    video.muted = this.isMuted;
+  }
+
+  setVolume(event: Event) {
+    if (!this.videoPlayer) return;
+    
+    const input = event.target as HTMLInputElement;
+    this.volume = parseFloat(input.value);
+    this.videoPlayer.nativeElement.volume = this.volume;
+    
+    if (this.volume === 0) {
+      this.isMuted = true;
+      this.videoPlayer.nativeElement.muted = true;
+    } else if (this.isMuted) {
+      this.isMuted = false;
+      this.videoPlayer.nativeElement.muted = false;
+    }
+  }
+
+  setPlaybackSpeed(event: Event) {
+    if (!this.videoPlayer) return;
+    
+    const select = event.target as HTMLSelectElement;
+    this.playbackSpeed = parseFloat(select.value);
+    this.videoPlayer.nativeElement.playbackRate = this.playbackSpeed;
+  }
+
   toggleFullscreen() {
-    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-    if (videoElement) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      } else {
-        videoElement.requestFullscreen();
-      }
+    if (!this.videoPlayer) return;
+    
+    const video = this.videoPlayer.nativeElement;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      video.requestFullscreen().catch(console.error);
     }
   }
 
@@ -1092,14 +1361,21 @@ export class ToolInfoDisplayComponent {
     this.isPlaying = false;
     this.currentTime = 0;
     this.videoProgress = 0;
-    this.showCustomControls = false;
+    this.showControls = false;
     this.currentVideoUrl = '';
+    this.isVideoLoading = false;
   }
 
   formatTime(seconds: number): string {
-    if (isNaN(seconds)) return '0:00';
-    const minutes = Math.floor(seconds / 60);
+    if (isNaN(seconds) || seconds < 0) return '0:00';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = Math.floor(seconds % 60);
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
 
@@ -1157,6 +1433,27 @@ export class ToolInfoDisplayComponent {
     return icons[categoryName] || '🔧';
   }
 
+  getToolIcon(toolName: string): string {
+    const icons: Record<string, string> = {
+      'ChatGPT': '🤖',
+      'DALL·E': '🎨',
+      'GitHub Copilot': '👨‍💻',
+      'Midjourney': '🖼️',
+      'Claude': '🧠',
+      'Stable Diffusion': '🎭',
+      'ElevenLabs': '🎙️',
+      'Runway ML': '🎬',
+      'Gemini': '💎',
+      'Jasper': '✍️',
+      'Cursor': '⌨️',
+      'Synthesia': '👤',
+      'Mubert': '🎵',
+      'Canva AI': '🎨',
+      'Notion AI': '📝'
+    };
+    return icons[toolName] || '🛠️';
+  }
+
   getThumbnailGradient(): string {
     if (!this.selectedTool) return 'linear-gradient(135deg, #3b82f6, #1e40af)';
     const color = this.selectedTool.categoryColor;
@@ -1164,7 +1461,6 @@ export class ToolInfoDisplayComponent {
   }
 
   private darkenColor(color: string, percent: number): string {
-    // Simple color darkening - in a real app, you might use a color manipulation library
     const hex = color.replace('#', '');
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
@@ -1176,286 +1472,5 @@ export class ToolInfoDisplayComponent {
     const newB = Math.round(b * factor);
     
     return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
-  }
-
-  playDemoVideo() {
-    if (!this.selectedTool) return;
-    
-    // Get video URL for the selected tool
-    const videoData = this.videoDatabase[this.selectedTool.name] || this.videoDatabase['default'];
-    this.currentVideoUrl = videoData.url;
-    
-    // Show video player
-    this.isVideoPlaying = true;
-    this.isPlaying = true;
-    
-    // Scroll to video section
-    setTimeout(() => {
-      const demoSection = document.querySelector('.demo-video-section');
-      if (demoSection) {
-        demoSection.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center' 
-        });
-      }
-    }, 100);
-  }
-
-  onVideoLoaded() {
-    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-    if (videoElement) {
-      this.duration = videoElement.duration;
-      this.showCustomControls = true;
-    }
-  }
-
-  onVideoEnded() {
-    this.isPlaying = false;
-    this.videoProgress = 100;
-    
-    // Auto-close video after 3 seconds
-    setTimeout(() => {
-      this.closeVideo();
-    }, 3000);
-  }
-
-  onVideoError(event: any) {
-    console.error('Video loading error:', event);
-    // Fallback to a different video or show error message
-    this.currentVideoUrl = this.videoDatabase['default'].url;
-  }
-
-  togglePlayPause() {
-    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-    if (videoElement) {
-      if (this.isPlaying) {
-        videoElement.pause();
-        this.isPlaying = false;
-      } else {
-        videoElement.play();
-        this.isPlaying = true;
-      }
-    }
-  }
-
-  toggleFullscreen() {
-    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-    if (videoElement) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      } else {
-        videoElement.requestFullscreen();
-      }
-    }
-  }
-
-  closeVideo() {
-    this.isVideoPlaying = false;
-    this.isPlaying = false;
-    this.currentTime = 0;
-    this.videoProgress = 0;
-    this.showCustomControls = false;
-    this.currentVideoUrl = '';
-  }
-
-  formatTime(seconds: number): string {
-    if (isNaN(seconds)) return '0:00';
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
-
-  ngOnInit() {
-    // Set up video progress tracking
-    setInterval(() => {
-      if (this.isVideoPlaying && this.isPlaying) {
-        const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-        if (videoElement) {
-          this.currentTime = videoElement.currentTime;
-          this.duration = videoElement.duration;
-          this.videoProgress = (this.currentTime / this.duration) * 100;
-        }
-      }
-    }, 1000);
-  }
-
-  getVideoDuration(): string {
-    if (!this.selectedTool) return '2:30';
-    const videoData = this.videoDatabase[this.selectedTool.name] || this.videoDatabase['default'];
-    return videoData.duration;
-  }
-
-  playDemoVideo() {
-    if (!this.selectedTool) return;
-    
-    // Get video URL for the selected tool
-    const videoData = this.videoDatabase[this.selectedTool.name] || this.videoDatabase['default'];
-    this.currentVideoUrl = videoData.url;
-    
-    // Show video player
-    this.isVideoPlaying = true;
-    this.isPlaying = true;
-    
-    // Scroll to video section
-    setTimeout(() => {
-      const demoSection = document.querySelector('.demo-video-section');
-      if (demoSection) {
-        demoSection.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center' 
-        });
-      }
-    }, 100);
-  }
-
-  onVideoLoaded() {
-    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-    if (videoElement) {
-      this.duration = videoElement.duration;
-      this.showCustomControls = true;
-    }
-  }
-
-  onVideoEnded() {
-    this.isPlaying = false;
-    this.videoProgress = 100;
-    
-    // Auto-close video after 3 seconds
-    setTimeout(() => {
-      this.closeVideo();
-    }, 3000);
-  }
-
-  onVideoError(event: any) {
-    console.error('Video loading error:', event);
-    // Fallback to a different video or show error message
-    this.currentVideoUrl = this.videoDatabase['default'].url;
-  }
-
-  togglePlayPause() {
-    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-    if (videoElement) {
-      if (this.isPlaying) {
-        videoElement.pause();
-        this.isPlaying = false;
-      } else {
-        videoElement.play();
-        this.isPlaying = true;
-      }
-    }
-  }
-
-  toggleFullscreen() {
-    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-    if (videoElement) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      } else {
-        videoElement.requestFullscreen();
-      }
-    }
-  }
-
-  closeVideo() {
-    this.isVideoPlaying = false;
-    this.isPlaying = false;
-    this.currentTime = 0;
-    this.videoProgress = 0;
-    this.showCustomControls = false;
-    this.currentVideoUrl = '';
-  }
-
-  formatTime(seconds: number): string {
-    if (isNaN(seconds)) return '0:00';
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
-
-  playDemoVideo() {
-    if (!this.selectedTool) return;
-    
-    // Get video URL for the selected tool
-    const videoData = this.videoDatabase[this.selectedTool.name] || this.videoDatabase['default'];
-    this.currentVideoUrl = videoData.url;
-    
-    // Show video player
-    this.isVideoPlaying = true;
-    this.isPlaying = true;
-    
-    // Scroll to video section
-    setTimeout(() => {
-      const demoSection = document.querySelector('.demo-video-section');
-      if (demoSection) {
-        demoSection.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center' 
-        });
-      }
-    }, 100);
-  }
-
-  onVideoLoaded() {
-    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-    if (videoElement) {
-      this.duration = videoElement.duration;
-      this.showCustomControls = true;
-    }
-  }
-
-  onVideoEnded() {
-    this.isPlaying = false;
-    this.videoProgress = 100;
-    
-    // Auto-close video after 3 seconds
-    setTimeout(() => {
-      this.closeVideo();
-    }, 3000);
-  }
-
-  onVideoError(event: any) {
-    console.error('Video loading error:', event);
-    // Fallback to a different video or show error message
-    this.currentVideoUrl = this.videoDatabase['default'].url;
-  }
-
-  togglePlayPause() {
-    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-    if (videoElement) {
-      if (this.isPlaying) {
-        videoElement.pause();
-        this.isPlaying = false;
-      } else {
-        videoElement.play();
-        this.isPlaying = true;
-      }
-    }
-  }
-
-  toggleFullscreen() {
-    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
-    if (videoElement) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      } else {
-        videoElement.requestFullscreen();
-      }
-    }
-  }
-
-  closeVideo() {
-    this.isVideoPlaying = false;
-    this.isPlaying = false;
-    this.currentTime = 0;
-    this.videoProgress = 0;
-    this.showCustomControls = false;
-    this.currentVideoUrl = '';
-  }
-
-  formatTime(seconds: number): string {
-    if (isNaN(seconds)) return '0:00';
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
 }
