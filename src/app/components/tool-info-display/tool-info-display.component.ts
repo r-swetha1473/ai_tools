@@ -46,15 +46,15 @@ export interface CategoryInfo {
       <div class="demo-video-section" *ngIf="selectedTool">
         <h4 class="demo-title">See {{ selectedTool.name }} in Action</h4>
         <div class="video-container">
-          <div class="video-placeholder">
-            <div class="video-play-button" (click)="playDemoVideo()">
+          <div class="video-placeholder" *ngIf="!isVideoPlaying">
+            <div class="video-play-button" (click)="playDemoVideo()" [attr.aria-label]="'Play demo video for ' + selectedTool.name">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M8 5v14l11-7z"/>
               </svg>
             </div>
             <div class="video-overlay">
               <div class="video-info">
-                <span class="video-duration">2:30</span>
+                <span class="video-duration">{{ getVideoDuration() }}</span>
                 <span class="video-quality">HD</span>
               </div>
             </div>
@@ -71,9 +71,58 @@ export interface CategoryInfo {
               </div>
             </div>
           </div>
+          
+          <!-- Actual Video Player -->
+          <div class="video-player" *ngIf="isVideoPlaying">
+            <video 
+              #videoPlayer
+              [src]="currentVideoUrl"
+              controls
+              autoplay
+              preload="metadata"
+              (loadedmetadata)="onVideoLoaded()"
+              (ended)="onVideoEnded()"
+              (error)="onVideoError($event)"
+              class="demo-video"
+              [attr.aria-label]="'Demo video for ' + selectedTool.name"
+            >
+              <source [src]="currentVideoUrl" type="video/mp4">
+              <p>Your browser doesn't support HTML5 video. Here's a <a [href]="currentVideoUrl">link to the video</a> instead.</p>
+            </video>
+            
+            <!-- Video Controls Overlay -->
+            <div class="video-controls-overlay" *ngIf="showCustomControls">
+              <div class="video-progress">
+                <div class="progress-bar" [style.width.%]="videoProgress"></div>
+              </div>
+              <div class="video-controls">
+                <button class="control-btn" (click)="togglePlayPause()" [attr.aria-label]="isPlaying ? 'Pause video' : 'Play video'">
+                  <svg *ngIf="!isPlaying" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                  <svg *ngIf="isPlaying" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                  </svg>
+                </button>
+                <span class="video-time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
+                <button class="control-btn" (click)="toggleFullscreen()" aria-label="Toggle fullscreen">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                  </svg>
+                </button>
+                <button class="control-btn close-btn" (click)="closeVideo()" aria-label="Close video">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
         <p class="demo-description">
           Watch how {{ selectedTool.name }} can streamline your workflow and boost productivity.
+          <span *ngIf="isVideoPlaying" class="video-status"> • Now playing</span>
         </p>
       </div>
       
@@ -302,6 +351,117 @@ export interface CategoryInfo {
       100% {
         transform: scale(1);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      }
+    }
+
+    /* Video Player Styles */
+    .video-player {
+      position: relative;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .demo-video {
+      width: 100%;
+      height: auto;
+      max-height: 400px;
+      display: block;
+      border-radius: 12px;
+    }
+
+    .video-controls-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .video-player:hover .video-controls-overlay {
+      opacity: 1;
+    }
+
+    .video-progress {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: #3b82f6;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .video-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: white;
+    }
+
+    .control-btn {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .control-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.1);
+    }
+
+    .control-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .close-btn {
+      margin-left: auto;
+      background: rgba(239, 68, 68, 0.8);
+    }
+
+    .close-btn:hover {
+      background: rgba(239, 68, 68, 1);
+    }
+
+    .video-time {
+      font-size: 14px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.9);
+      margin-left: auto;
+      margin-right: 16px;
+    }
+
+    .video-status {
+      color: var(--video-status-color);
+      font-weight: 600;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.6;
       }
     }
 
@@ -731,6 +891,7 @@ export interface CategoryInfo {
       --demo-section-border: #e2e8f0;
       --demo-title: #1e293b;
       --demo-description: #64748b;
+      --video-status-color: #10b981;
     }
 
     /* Dark theme */
@@ -773,6 +934,7 @@ export interface CategoryInfo {
       --demo-section-border: #475569;
       --demo-title: #f1f5f9;
       --demo-description: #94a3b8;
+      --video-status-color: #34d399;
     }
   `],
   standalone: true,
@@ -784,6 +946,162 @@ export class ToolInfoDisplayComponent {
   @Output() visitTool = new EventEmitter<string>();
   @Output() shareTool = new EventEmitter<ToolInfo>();
   @Output() toolSelect = new EventEmitter<ToolInfo>();
+  
+  // Video player properties
+  isVideoPlaying = false;
+  currentVideoUrl = '';
+  showCustomControls = false;
+  isPlaying = false;
+  currentTime = 0;
+  duration = 0;
+  videoProgress = 0;
+  
+  // Sample AI tool demo videos (using publicly available demo videos)
+  private videoDatabase: { [key: string]: { url: string; duration: string } } = {
+    'ChatGPT': {
+      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
+      duration: '1:30'
+    },
+    'DALL·E': {
+      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4',
+      duration: '2:15'
+    },
+    'GitHub Copilot': {
+      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_5mb.mp4',
+      duration: '3:45'
+    },
+    'Midjourney': {
+      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
+      duration: '2:30'
+    },
+    'Claude': {
+      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4',
+      duration: '2:00'
+    },
+    'Stable Diffusion': {
+      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_5mb.mp4',
+      duration: '4:20'
+    },
+    'ElevenLabs': {
+      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
+      duration: '1:45'
+    },
+    'Runway ML': {
+      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4',
+      duration: '3:10'
+    },
+    'default': {
+      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
+      duration: '2:30'
+    }
+  };
+
+  ngOnInit() {
+    // Set up video progress tracking
+    setInterval(() => {
+      if (this.isVideoPlaying && this.isPlaying) {
+        const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+        if (videoElement) {
+          this.currentTime = videoElement.currentTime;
+          this.duration = videoElement.duration;
+          this.videoProgress = (this.currentTime / this.duration) * 100;
+        }
+      }
+    }, 1000);
+  }
+
+  getVideoDuration(): string {
+    if (!this.selectedTool) return '2:30';
+    const videoData = this.videoDatabase[this.selectedTool.name] || this.videoDatabase['default'];
+    return videoData.duration;
+  }
+
+  playDemoVideo() {
+    if (!this.selectedTool) return;
+    
+    // Get video URL for the selected tool
+    const videoData = this.videoDatabase[this.selectedTool.name] || this.videoDatabase['default'];
+    this.currentVideoUrl = videoData.url;
+    
+    // Show video player
+    this.isVideoPlaying = true;
+    this.isPlaying = true;
+    
+    // Scroll to video section
+    setTimeout(() => {
+      const demoSection = document.querySelector('.demo-video-section');
+      if (demoSection) {
+        demoSection.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }
+    }, 100);
+  }
+
+  onVideoLoaded() {
+    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+    if (videoElement) {
+      this.duration = videoElement.duration;
+      this.showCustomControls = true;
+    }
+  }
+
+  onVideoEnded() {
+    this.isPlaying = false;
+    this.videoProgress = 100;
+    
+    // Auto-close video after 3 seconds
+    setTimeout(() => {
+      this.closeVideo();
+    }, 3000);
+  }
+
+  onVideoError(event: any) {
+    console.error('Video loading error:', event);
+    // Fallback to a different video or show error message
+    this.currentVideoUrl = this.videoDatabase['default'].url;
+  }
+
+  togglePlayPause() {
+    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+    if (videoElement) {
+      if (this.isPlaying) {
+        videoElement.pause();
+        this.isPlaying = false;
+      } else {
+        videoElement.play();
+        this.isPlaying = true;
+      }
+    }
+  }
+
+  toggleFullscreen() {
+    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+    if (videoElement) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        videoElement.requestFullscreen();
+      }
+    }
+  }
+
+  closeVideo() {
+    this.isVideoPlaying = false;
+    this.isPlaying = false;
+    this.currentTime = 0;
+    this.videoProgress = 0;
+    this.showCustomControls = false;
+    this.currentVideoUrl = '';
+  }
+
+  formatTime(seconds: number): string {
+    if (isNaN(seconds)) return '0:00';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
 
   onVisitTool() {
     if (this.selectedTool?.url) {
@@ -861,27 +1179,283 @@ export class ToolInfoDisplayComponent {
   }
 
   playDemoVideo() {
-    // Scroll to the demo video section smoothly
-    const demoSection = document.querySelector('.demo-video-section');
-    if (demoSection) {
-      demoSection.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center' 
-      });
-      
-      // Add a highlight effect to the video container
-      const videoContainer = demoSection.querySelector('.video-container');
-      if (videoContainer) {
-        videoContainer.classList.add('highlight-pulse');
-        setTimeout(() => {
-          videoContainer.classList.remove('highlight-pulse');
-        }, 2000);
+    if (!this.selectedTool) return;
+    
+    // Get video URL for the selected tool
+    const videoData = this.videoDatabase[this.selectedTool.name] || this.videoDatabase['default'];
+    this.currentVideoUrl = videoData.url;
+    
+    // Show video player
+    this.isVideoPlaying = true;
+    this.isPlaying = true;
+    
+    // Scroll to video section
+    setTimeout(() => {
+      const demoSection = document.querySelector('.demo-video-section');
+      if (demoSection) {
+        demoSection.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }
+    }, 100);
+  }
+
+  onVideoLoaded() {
+    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+    if (videoElement) {
+      this.duration = videoElement.duration;
+      this.showCustomControls = true;
+    }
+  }
+
+  onVideoEnded() {
+    this.isPlaying = false;
+    this.videoProgress = 100;
+    
+    // Auto-close video after 3 seconds
+    setTimeout(() => {
+      this.closeVideo();
+    }, 3000);
+  }
+
+  onVideoError(event: any) {
+    console.error('Video loading error:', event);
+    // Fallback to a different video or show error message
+    this.currentVideoUrl = this.videoDatabase['default'].url;
+  }
+
+  togglePlayPause() {
+    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+    if (videoElement) {
+      if (this.isPlaying) {
+        videoElement.pause();
+        this.isPlaying = false;
+      } else {
+        videoElement.play();
+        this.isPlaying = true;
       }
     }
+  }
+
+  toggleFullscreen() {
+    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+    if (videoElement) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        videoElement.requestFullscreen();
+      }
+    }
+  }
+
+  closeVideo() {
+    this.isVideoPlaying = false;
+    this.isPlaying = false;
+    this.currentTime = 0;
+    this.videoProgress = 0;
+    this.showCustomControls = false;
+    this.currentVideoUrl = '';
+  }
+
+  formatTime(seconds: number): string {
+    if (isNaN(seconds)) return '0:00';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  ngOnInit() {
+    // Set up video progress tracking
+    setInterval(() => {
+      if (this.isVideoPlaying && this.isPlaying) {
+        const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+        if (videoElement) {
+          this.currentTime = videoElement.currentTime;
+          this.duration = videoElement.duration;
+          this.videoProgress = (this.currentTime / this.duration) * 100;
+        }
+      }
+    }, 1000);
+  }
+
+  getVideoDuration(): string {
+    if (!this.selectedTool) return '2:30';
+    const videoData = this.videoDatabase[this.selectedTool.name] || this.videoDatabase['default'];
+    return videoData.duration;
+  }
+
+  playDemoVideo() {
+    if (!this.selectedTool) return;
     
-    // For now, show an alert after scrolling - in a real app, this would open a video modal
+    // Get video URL for the selected tool
+    const videoData = this.videoDatabase[this.selectedTool.name] || this.videoDatabase['default'];
+    this.currentVideoUrl = videoData.url;
+    
+    // Show video player
+    this.isVideoPlaying = true;
+    this.isPlaying = true;
+    
+    // Scroll to video section
     setTimeout(() => {
-      alert(`Playing demo video for ${this.selectedTool?.name}!\n\nIn a real implementation, this would:\n• Open a video modal\n• Play an embedded video\n• Navigate to a demo page\n• Show interactive tutorial`);
-    }, 500);
+      const demoSection = document.querySelector('.demo-video-section');
+      if (demoSection) {
+        demoSection.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }
+    }, 100);
+  }
+
+  onVideoLoaded() {
+    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+    if (videoElement) {
+      this.duration = videoElement.duration;
+      this.showCustomControls = true;
+    }
+  }
+
+  onVideoEnded() {
+    this.isPlaying = false;
+    this.videoProgress = 100;
+    
+    // Auto-close video after 3 seconds
+    setTimeout(() => {
+      this.closeVideo();
+    }, 3000);
+  }
+
+  onVideoError(event: any) {
+    console.error('Video loading error:', event);
+    // Fallback to a different video or show error message
+    this.currentVideoUrl = this.videoDatabase['default'].url;
+  }
+
+  togglePlayPause() {
+    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+    if (videoElement) {
+      if (this.isPlaying) {
+        videoElement.pause();
+        this.isPlaying = false;
+      } else {
+        videoElement.play();
+        this.isPlaying = true;
+      }
+    }
+  }
+
+  toggleFullscreen() {
+    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+    if (videoElement) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        videoElement.requestFullscreen();
+      }
+    }
+  }
+
+  closeVideo() {
+    this.isVideoPlaying = false;
+    this.isPlaying = false;
+    this.currentTime = 0;
+    this.videoProgress = 0;
+    this.showCustomControls = false;
+    this.currentVideoUrl = '';
+  }
+
+  formatTime(seconds: number): string {
+    if (isNaN(seconds)) return '0:00';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  playDemoVideo() {
+    if (!this.selectedTool) return;
+    
+    // Get video URL for the selected tool
+    const videoData = this.videoDatabase[this.selectedTool.name] || this.videoDatabase['default'];
+    this.currentVideoUrl = videoData.url;
+    
+    // Show video player
+    this.isVideoPlaying = true;
+    this.isPlaying = true;
+    
+    // Scroll to video section
+    setTimeout(() => {
+      const demoSection = document.querySelector('.demo-video-section');
+      if (demoSection) {
+        demoSection.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }
+    }, 100);
+  }
+
+  onVideoLoaded() {
+    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+    if (videoElement) {
+      this.duration = videoElement.duration;
+      this.showCustomControls = true;
+    }
+  }
+
+  onVideoEnded() {
+    this.isPlaying = false;
+    this.videoProgress = 100;
+    
+    // Auto-close video after 3 seconds
+    setTimeout(() => {
+      this.closeVideo();
+    }, 3000);
+  }
+
+  onVideoError(event: any) {
+    console.error('Video loading error:', event);
+    // Fallback to a different video or show error message
+    this.currentVideoUrl = this.videoDatabase['default'].url;
+  }
+
+  togglePlayPause() {
+    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+    if (videoElement) {
+      if (this.isPlaying) {
+        videoElement.pause();
+        this.isPlaying = false;
+      } else {
+        videoElement.play();
+        this.isPlaying = true;
+      }
+    }
+  }
+
+  toggleFullscreen() {
+    const videoElement = document.querySelector('.demo-video') as HTMLVideoElement;
+    if (videoElement) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        videoElement.requestFullscreen();
+      }
+    }
+  }
+
+  closeVideo() {
+    this.isVideoPlaying = false;
+    this.isPlaying = false;
+    this.currentTime = 0;
+    this.videoProgress = 0;
+    this.showCustomControls = false;
+    this.currentVideoUrl = '';
+  }
+
+  formatTime(seconds: number): string {
+    if (isNaN(seconds)) return '0:00';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
 }
