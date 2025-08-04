@@ -48,7 +48,7 @@ export interface CategoryInfo {
         <div class="video-container" [class.highlight-pulse]="videoHighlight">
           
           <!-- Video Thumbnail/Placeholder -->
-          <div class="video-placeholder" *ngIf="!isVideoPlaying" (click)="playDemoVideo()">
+          <div class="video-placeholder" *ngIf="!isVideoPlaying" (click)="playDemoVideo()" [attr.data-tool]="selectedTool.name">
             <div class="video-play-button" [attr.aria-label]="'Play demo video for ' + selectedTool.name">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M8 5v14l11-7z"/>
@@ -56,7 +56,7 @@ export interface CategoryInfo {
             </div>
             <div class="video-overlay">
               <div class="video-info">
-                <span class="video-duration">{{ getVideoDuration() }}</span>
+                <span class="video-duration">{{ getVideoInfo()?.duration || getVideoDuration() }}</span>
                 <span class="video-quality">HD</span>
               </div>
             </div>
@@ -67,8 +67,8 @@ export interface CategoryInfo {
                   {{ getToolIcon(selectedTool.name) }}
                 </div>
                 <div class="thumbnail-text">
-                  <h5>{{ selectedTool.name }} Demo</h5>
-                  <p>Interactive walkthrough</p>
+                  <h5>{{ getVideoInfo()?.title || selectedTool.name + ' Demo' }}</h5>
+                  <p>{{ getVideoInfo()?.description || 'Interactive walkthrough' }}</p>
                 </div>
               </div>
             </div>
@@ -175,7 +175,7 @@ export interface CategoryInfo {
         </div>
         
         <p class="demo-description">
-          Watch how {{ selectedTool.name }} can streamline your workflow and boost productivity.
+          {{ getVideoInfo()?.description || 'Watch how ' + selectedTool.name + ' can streamline your workflow and boost productivity.' }}
           <span *ngIf="isVideoPlaying && isPlaying" class="video-status"> • Now playing</span>
           <span *ngIf="isVideoPlaying && !isPlaying" class="video-status paused"> • Paused</span>
         </p>
@@ -1144,54 +1144,13 @@ export class ToolInfoDisplayComponent implements OnInit {
   videoHighlight = false;
   
   // Real AI tool demo videos database
-  private videoDatabase: { [key: string]: { url: string; duration: string } } = {
-    'ChatGPT': {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      duration: '9:56'
-    },
-    'DALL·E': {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-      duration: '10:53'
-    },
-    'GitHub Copilot': {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      duration: '0:15'
-    },
-    'Midjourney': {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-      duration: '0:15'
-    },
-    'Claude': {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-      duration: '0:60'
-    },
-    'Stable Diffusion': {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-      duration: '0:15'
-    },
-    'ElevenLabs': {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-      duration: '0:15'
-    },
-    'Runway ML': {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-      duration: '14:48'
-    },
-    'Gemini': {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
-      duration: '0:15'
-    },
-    'Jasper': {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-      duration: '12:14'
-    },
-    'default': {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      duration: '9:56'
-    }
-  };
+  private videoData: any = null;
+  private baseUrl = 'https://ai-server-859193427822.asia-south1.run.app/api';
 
   ngOnInit() {
+    // Load video database from server
+    this.loadVideoDatabase();
+    
     // Auto-hide controls after 3 seconds of inactivity
     let controlsTimeout: any;
     
@@ -1206,17 +1165,54 @@ export class ToolInfoDisplayComponent implements OnInit {
     });
   }
 
-  getVideoDuration(): string {
-    if (!this.selectedTool) return '2:30';
-    const videoData = this.videoDatabase[this.selectedTool.name] || this.videoDatabase['default'];
-    return videoData.duration;
+  private loadVideoDatabase() {
+    fetch(`${this.baseUrl}/videos`)
+      .then(response => response.json())
+      .then(data => {
+        this.videoData = data;
+      })
+      .catch(error => {
+        console.error('Error loading video database:', error);
+        // Fallback to default video
+        this.videoData = {
+          'default': {
+            url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+            duration: '9:56',
+            title: 'AI Tool Demo',
+            description: 'Discover the power of artificial intelligence'
+          }
+        };
+      });
   }
 
-  playDemoVideo() {
+  private async getVideoForTool(toolName: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/videos/by-name/${encodeURIComponent(toolName)}`);
+      const data = await response.json();
+      return data.video;
+    } catch (error) {
+      console.error('Error fetching video for tool:', toolName, error);
+      return this.videoData?.['default'] || {
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        duration: '9:56',
+        title: 'AI Tool Demo',
+        description: 'Discover the power of artificial intelligence'
+      };
+    }
+  }
+
+  getVideoDuration(): string {
+    if (!this.selectedTool || !this.videoData) return '2:30';
+    const toolKey = this.selectedTool.name.toLowerCase().replace(/\s+/g, '-');
+    const video = this.videoData[toolKey] || this.videoData['default'];
+    return video?.duration || '2:30';
+  }
+
+  async playDemoVideo() {
     if (!this.selectedTool || this.isVideoPlaying) return;
     
-    // Get video URL for the selected tool
-    const videoData = this.videoDatabase[this.selectedTool.name] || this.videoDatabase['default'];
+    // Get video data for the selected tool
+    const videoData = await this.getVideoForTool(this.selectedTool.name);
     this.currentVideoUrl = videoData.url;
     
     // Show video player
@@ -1285,8 +1281,8 @@ export class ToolInfoDisplayComponent implements OnInit {
     this.isVideoLoading = false;
     
     // Try fallback video
-    if (this.currentVideoUrl !== this.videoDatabase['default'].url) {
-      this.currentVideoUrl = this.videoDatabase['default'].url;
+    if (this.videoData && this.currentVideoUrl !== this.videoData['default'].url) {
+      this.currentVideoUrl = this.videoData['default'].url;
     }
   }
 
@@ -1472,5 +1468,11 @@ export class ToolInfoDisplayComponent implements OnInit {
     const newB = Math.round(b * factor);
     
     return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+  }
+
+  getVideoInfo(): any {
+    if (!this.selectedTool || !this.videoData) return null;
+    const toolKey = this.selectedTool.name.toLowerCase().replace(/\s+/g, '-');
+    return this.videoData[toolKey] || this.videoData['default'];
   }
 }

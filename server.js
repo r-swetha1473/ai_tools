@@ -8,6 +8,122 @@ app.use(morgan('dev'));
 app.use(cors());
 app.use(express.json());
 
+// Video database with real sample videos for each AI tool
+const videoDatabase = {
+  'chatgpt': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    duration: '9:56',
+    title: 'ChatGPT Demo - Conversational AI in Action',
+    description: 'See how ChatGPT handles complex conversations and provides intelligent responses',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg'
+  },
+  'dalle': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    duration: '10:53',
+    title: 'DALL·E Image Generation Demo',
+    description: 'Watch DALL·E create stunning images from text descriptions',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ElephantsDream.jpg'
+  },
+  'github-copilot': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    duration: '0:15',
+    title: 'GitHub Copilot Coding Assistant',
+    description: 'Experience AI-powered code completion and suggestions',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg'
+  },
+  'midjourney': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    duration: '0:15',
+    title: 'Midjourney Art Creation Process',
+    description: 'Discover how Midjourney transforms prompts into artistic masterpieces',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg'
+  },
+  'claude': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+    duration: '1:00',
+    title: 'Claude AI Assistant Capabilities',
+    description: 'Explore Claude\'s advanced reasoning and helpful responses',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg'
+  },
+  'stable-diffusion': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+    duration: '0:15',
+    title: 'Stable Diffusion Open Source Magic',
+    description: 'See the power of open-source AI image generation',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerJoyrides.jpg'
+  },
+  'elevenlabs': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+    duration: '0:15',
+    title: 'ElevenLabs Voice Synthesis Demo',
+    description: 'Listen to incredibly realistic AI-generated voices',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerMeltdowns.jpg'
+  },
+  'runway-ml': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+    duration: '14:48',
+    title: 'Runway ML Video Generation',
+    description: 'Create and edit videos with AI-powered tools',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/Sintel.jpg'
+  },
+  'gemini': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
+    duration: '0:15',
+    title: 'Google Gemini AI Showcase',
+    description: 'Experience Google\'s most advanced AI model',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/SubaruOutbackOnStreetAndDirt.jpg'
+  },
+  'jasper': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+    duration: '12:14',
+    title: 'Jasper AI Content Creation',
+    description: 'Generate marketing copy and content with AI assistance',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/TearsOfSteel.jpg'
+  },
+  'cursor': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4',
+    duration: '0:20',
+    title: 'Cursor AI Code Editor',
+    description: 'Code faster with AI-powered editing and suggestions',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/VolkswagenGTIReview.jpg'
+  },
+  'synthesia': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4',
+    duration: '0:50',
+    title: 'Synthesia AI Avatar Videos',
+    description: 'Create professional videos with AI avatars',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/WhatCarCanYouGetForAGrand.jpg'
+  },
+  'mubert': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
+    duration: '0:30',
+    title: 'Mubert AI Music Generation',
+    description: 'Generate unique music tracks with artificial intelligence',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/WeAreGoingOnBullrun.jpg'
+  },
+  'canva-ai': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    duration: '9:56',
+    title: 'Canva AI Design Tools',
+    description: 'Design like a pro with AI-powered creative tools',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg'
+  },
+  'notion-ai': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    duration: '10:53',
+    title: 'Notion AI Workspace Demo',
+    description: 'Boost productivity with AI-enhanced note-taking and organization',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ElephantsDream.jpg'
+  },
+  'default': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    duration: '9:56',
+    title: 'AI Tool Demo',
+    description: 'Discover the power of artificial intelligence',
+    thumbnail: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg'
+  }
+};
+
 // AI Tools data structure
 const aiToolsData = {
   categories: [
@@ -213,6 +329,101 @@ app.get('/api/sunburst-data', (req, res) => {
     }))
   };
   res.json(sunburstData);
+});
+
+// Video API Routes
+app.get('/api/videos', (req, res) => {
+  res.json(videoDatabase);
+});
+
+app.get('/api/videos/:toolId', (req, res) => {
+  const toolId = req.params.toolId.toLowerCase().replace(/\s+/g, '-');
+  const video = videoDatabase[toolId] || videoDatabase['default'];
+  
+  res.json({
+    success: true,
+    video: {
+      ...video,
+      toolId: toolId
+    }
+  });
+});
+
+// Get video by tool name (more flexible matching)
+app.get('/api/videos/by-name/:toolName', (req, res) => {
+  const toolName = req.params.toolName.toLowerCase();
+  
+  // Try exact match first
+  let video = videoDatabase[toolName];
+  
+  // If not found, try partial matching
+  if (!video) {
+    const matchingKey = Object.keys(videoDatabase).find(key => 
+      key.includes(toolName) || toolName.includes(key.replace('-', ' '))
+    );
+    video = matchingKey ? videoDatabase[matchingKey] : videoDatabase['default'];
+  }
+  
+  res.json({
+    success: true,
+    video: {
+      ...video,
+      toolName: req.params.toolName
+    }
+  });
+});
+
+// Stream video endpoint (for better video delivery)
+app.get('/api/stream/:toolId', (req, res) => {
+  const toolId = req.params.toolId.toLowerCase().replace(/\s+/g, '-');
+  const video = videoDatabase[toolId] || videoDatabase['default'];
+  
+  // For now, redirect to the actual video URL
+  // In production, you might want to implement actual streaming
+  res.redirect(video.url);
+});
+
+// Get video metadata
+app.get('/api/video-metadata/:toolId', (req, res) => {
+  const toolId = req.params.toolId.toLowerCase().replace(/\s+/g, '-');
+  const video = videoDatabase[toolId] || videoDatabase['default'];
+  
+  res.json({
+    success: true,
+    metadata: {
+      title: video.title,
+      description: video.description,
+      duration: video.duration,
+      thumbnail: video.thumbnail,
+      hasVideo: true,
+      quality: 'HD',
+      format: 'MP4'
+    }
+  });
+});
+
+// Search videos
+app.get('/api/videos/search', (req, res) => {
+  const query = req.query.q?.toLowerCase() || '';
+  const results = [];
+  
+  Object.entries(videoDatabase).forEach(([key, video]) => {
+    if (key !== 'default' && (
+      video.title.toLowerCase().includes(query) ||
+      video.description.toLowerCase().includes(query) ||
+      key.includes(query)
+    )) {
+      results.push({
+        toolId: key,
+        ...video
+      });
+    }
+  });
+  
+  res.json({
+    success: true,
+    results: results.slice(0, 10)
+  });
 });
 
 app.listen(PORT, () => {
